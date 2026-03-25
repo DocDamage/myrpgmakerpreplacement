@@ -7,6 +7,7 @@ use crate::shader::{DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER, ShaderModule
 pub struct SpritePipeline {
     pub pipeline: wgpu::RenderPipeline,
     pub bind_group_layout: wgpu::BindGroupLayout,
+    pub camera_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl SpritePipeline {
@@ -95,12 +96,12 @@ impl SpritePipeline {
                 alpha_to_coverage_enabled: false,
             },
             multiview: None,
-
         });
         
         Self {
             pipeline,
             bind_group_layout: texture_bind_group_layout,
+            camera_bind_group_layout,
         }
     }
 }
