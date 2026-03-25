@@ -9,12 +9,12 @@ pub mod mesh;
 pub mod pipeline;
 pub mod shader;
 pub mod texture;
+pub mod tilemap;
 
 use camera::Camera;
-use glam::{Mat4, Vec2, Vec3};
-use mesh::{Quad, Vertex};
+use glam::{Mat4, Vec2};
 use pipeline::SpritePipeline;
-use texture::Texture;
+use tilemap::TileMapRenderer;
 
 /// Renderer state
 pub struct Renderer {
@@ -22,11 +22,12 @@ pub struct Renderer {
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
-    pub size: winit::dpi::PhysicalSize<u32>,
+    size: winit::dpi::PhysicalSize<u32>,
     sprite_pipeline: SpritePipeline,
     camera: Camera,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
+    tile_map: Option<TileMapRenderer>,
 }
 
 #[repr(C)]
@@ -149,7 +150,16 @@ impl Renderer {
             label: Some("camera_bind_group"),
         });
         
+        // Create test tile map (64x64 grid, 32px tiles)
+        let tile_map = TileMapRenderer::new(&device, 64, 64, 32.0);
+        
+        // Center camera on tile map
+        let mut camera = Camera::new(dde_core::components::CameraConfig::default());
+        let world_size = tile_map.world_size();
+        camera.set_target(Vec2::new(world_size.x / 2.0, world_size.y / 2.0));
+        
         tracing::info!("Renderer initialized: {}x{}", size.width, size.height);
+        tracing::info!("Tile map: {}x{} tiles", 64, 64);
         
         Self {
             surface,
@@ -161,6 +171,7 @@ impl Renderer {
             camera,
             camera_buffer,
             camera_bind_group,
+            tile_map: Some(tile_map),
         }
     }
     
@@ -196,18 +207,18 @@ impl Renderer {
             label: Some("Render Encoder"),
         });
         
-        // Clear render pass
+        // Main render pass
         {
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.1,
-                            b: 0.15,
+                            r: 0.05,
+                            g: 0.05,
+                            b: 0.08,
                             a: 1.0,
                         }),
                         store: wgpu::StoreOp::Store,
@@ -217,6 +228,15 @@ impl Renderer {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
+            
+            // Set pipeline and bind groups
+            render_pass.set_pipeline(&self.sprite_pipeline.pipeline);
+            render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+            
+            // Render tile map
+            if let Some(ref tile_map) = self.tile_map {
+                tile_map.render(&mut render_pass);
+            }
         }
         
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -248,6 +268,11 @@ impl Renderer {
     /// Get camera mutable reference
     pub fn camera_mut(&mut self) -> &mut Camera {
         &mut self.camera
+    }
+    
+    /// Get tile map world size
+    pub fn world_size(&self) -> Option<Vec2> {
+        self.tile_map.as_ref().map(|tm| tm.world_size())
     }
 }
 

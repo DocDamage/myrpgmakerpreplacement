@@ -2,6 +2,7 @@
 //! 
 //! A desktop RPG maker and simulation engine.
 
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use tracing::info;
@@ -18,6 +19,9 @@ use dde_core::resources::InputState;
 use dde_core::systems::simulation::Simulation;
 use dde_render::Renderer;
 
+mod project;
+use project::ProjectManager;
+
 /// Application state
 struct App {
     world: World,
@@ -26,6 +30,8 @@ struct App {
     input_state: InputState,
     last_frame: Instant,
     fps_counter: FpsCounter,
+    camera_target: glam::Vec2,
+    project_manager: ProjectManager,
 }
 
 impl App {
@@ -42,6 +48,8 @@ impl App {
             input_state,
             last_frame: Instant::now(),
             fps_counter: FpsCounter::new(),
+            camera_target: glam::Vec2::ZERO,
+            project_manager: ProjectManager::new(),
         }
     }
     
@@ -82,44 +90,103 @@ impl FpsCounter {
         
         if self.elapsed >= Duration::from_secs(1) {
             self.fps = self.frame_count as f32 / self.elapsed.as_secs_f32();
-            info!("FPS: {:.1}", self.fps);
+            info!("FPS: {:.1} | Sim Ticks: {}", self.fps, self.frame_count);
             self.frame_count = 0;
             self.elapsed = Duration::ZERO;
         }
     }
-    
-    fn fps(&self) -> f32 {
-        self.fps
-    }
+}
+
+fn print_usage() {
+    println!("DocDamage Engine (DDE)");
+    println!("Usage:");
+    println!("  dde                      # Create temporary demo project");
+    println!("  dde new <name>           # Create new project");
+    println!("  dde open <path>          # Open existing project");
+    println!();
 }
 
 fn main() -> anyhow::Result<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
     
-    info!("DocDamage Engine starting...");
-    info!("Version: {}-{}", env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_NAME"));
+    // Parse command line arguments
+    let args: Vec<String> = std::env::args().collect();
+    
+    let mut project_manager = ProjectManager::new();
+    
+    match args.len() {
+        1 => {
+            // No arguments - create demo project
+            info!("No project specified, creating demo project...");
+            let demo_path = project::default_project_path().join("demo.dde");
+            project_manager.create_new(&demo_path, "Demo Project")?;
+        }
+        2 => {
+            if args[1] == "--help" || args[1] == "-h" {
+                print_usage();
+                return Ok(());
+            }
+            // Single argument - treat as project file to open
+            let path = PathBuf::from(&args[1]);
+            project_manager.open(&path)?;
+        }
+        3 => {
+            match args[1].as_str() {
+                "new" => {
+                    let name = &args[2];
+                    let path = project::default_project_path()
+                        .join(project::project_filename(name));
+                    project_manager.create_new(&path, name)?;
+                }
+                "open" => {
+                    let path = PathBuf::from(&args[2]);
+                    project_manager.open(&path)?;
+                }
+                _ => {
+                    print_usage();
+                    anyhow::bail!("Unknown command: {}", args[1]);
+                }
+            }
+        }
+        _ => {
+            print_usage();
+            anyhow::bail!("Too many arguments");
+        }
+    }
+    
+    info!("═══════════════════════════════════════════");
+    info!("  DocDamage Engine (DDE)");
+    info!("  Version: {}", env!("CARGO_PKG_VERSION"));
+    info!("═══════════════════════════════════════════");
     
     // Create event loop
     let event_loop = EventLoop::new()?;
     
     // Create window
     let window_attributes = Window::default_attributes()
-        .with_title("DocDamage Engine")
+        .with_title("DocDamage Engine - Week 1 Demo")
         .with_inner_size(LogicalSize::new(1280.0, 720.0));
     
     let window = event_loop.create_window(window_attributes)?;
     
-    info!("Window created: 1280x720");
-    
     // Create renderer
     let mut renderer = pollster::block_on(Renderer::new(window));
     
-    // Create app state
-    let mut app = App::new(12345); // Fixed seed for now
+    // Set camera target to center of world
+    let world_size = renderer.world_size().unwrap_or(glam::Vec2::new(2048.0, 2048.0));
+    let camera_target = world_size / 2.0;
     
-    info!("Engine initialized successfully");
-    info!("Tick rate: {} Hz", 1000 / TICK_RATE.as_millis());
+    // Create app state
+    let mut app = App::new(12345);
+    app.camera_target = camera_target;
+    app.project_manager = project_manager;
+    
+    info!("World size: {:.0}x{:.0}", world_size.x, world_size.y);
+    info!("Camera target: {:.0}, {:.0}", camera_target.x, camera_target.y);
+    info!("Tick rate: {} Hz ({}ms)", 1000 / TICK_RATE.as_millis(), TICK_RATE.as_millis());
+    info!("Press ESC or close window to exit");
+    info!("═══════════════════════════════════════════");
     
     // Run event loop
     event_loop.run(move |event, elwt| {
@@ -128,12 +195,19 @@ fn main() -> anyhow::Result<()> {
         match event {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::CloseRequested => {
-                    info!("Window close requested");
+                    info!("Shutting down...");
+                    app.project_manager.close();
                     elwt.exit();
                 }
                 WindowEvent::Resized(physical_size) => {
                     renderer.resize(physical_size);
-                    info!("Window resized: {}x{}", physical_size.width, physical_size.height);
+                }
+                WindowEvent::KeyboardInput { event, .. } => {
+                    if event.logical_key == winit::keyboard::Key::Named(winit::keyboard::NamedKey::Escape) {
+                        info!("ESC pressed - shutting down...");
+                        app.project_manager.close();
+                        elwt.exit();
+                    }
                 }
                 _ => {}
             },
@@ -143,11 +217,11 @@ fn main() -> anyhow::Result<()> {
                 let dt = now - app.last_frame;
                 app.last_frame = now;
                 
-                // Update app state
+                // Update app state (runs simulation ticks)
                 app.update(dt);
                 
-                // Update camera (follow origin for now)
-                renderer.update_camera(glam::Vec2::ZERO, dt.as_secs_f32());
+                // Update camera (smooth follow)
+                renderer.update_camera(app.camera_target, dt.as_secs_f32());
                 
                 // Render
                 match renderer.render() {
@@ -161,7 +235,7 @@ fn main() -> anyhow::Result<()> {
                 }
             }
             Event::LoopExiting => {
-                info!("Engine shutting down...");
+                info!("Goodbye!");
             }
             _ => {}
         }
