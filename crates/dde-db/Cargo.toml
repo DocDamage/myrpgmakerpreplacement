@@ -1,0 +1,32 @@
+[package]
+name = "dde-db"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+dde-core = { path = "../dde-core" }
+
+# Database
+rusqlite = { workspace = true }
+refinery = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# Random
+rand = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }

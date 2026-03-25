@@ -1,0 +1,125 @@
+[package]
+name = "dde"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+authors = ["DocDamage Engine Team"]
+description = "DocDamage Engine - A desktop RPG maker and simulation engine"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/docsrpg/dde"
+
+[workspace]
+members = [
+    "crates/dde-core",
+    "crates/dde-render",
+    "crates/dde-db",
+    "crates/dde-editor",
+    "crates/dde-battle",
+    "crates/dde-audio",
+    "crates/dde-ai",
+    "crates/dde-export",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+authors = ["DocDamage Engine Team"]
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+# Core ECS and concurrency
+hecs = "0.10"
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+
+# Rendering
+wgpu = "0.20"
+winit = "0.30"
+egui = "0.28"
+egui-wgpu = "0.28"
+egui-winit = "0.28"
+
+# Window and input
+gilrs = "0.10"
+raw-window-handle = "0.6"
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled", "chrono", "uuid", "serde_json"] }
+refinery = { version = "0.8", features = ["rusqlite"] }
+
+# Async runtime
+tokio = { version = "1.40", features = ["rt", "rt-multi-thread", "sync", "time", "fs", "macros"] }
+
+# Serialization
+toml = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Math and random
+rand = { version = "0.8", features = ["small_rng"] }
+noise = "0.9"
+glam = { version = "0.29", features = ["bytemuck"] }
+
+# Audio
+kira = "0.9"
+midir = "0.10"
+
+# Scripting
+mlua = { version = "0.10", features = ["lua54", "vendored", "serialize"] }
+
+# Image processing
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+# Error handling and logging
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Time and dates
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP and networking
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# Utilities
+uuid = { version = "1.10", features = ["v4", "serde"] }
+bytemuck = { version = "1.18", features = ["derive"] }
+indexmap = "2.6"
+bitflags = "2.6"
+
+# Testing
+pretty_assertions = "1.4"
+
+[dependencies]
+dde-core = { path = "crates/dde-core" }
+dde-render = { path = "crates/dde-render" }
+dde-db = { path = "crates/dde-db" }
+dde-editor = { path = "crates/dde-editor" }
+dde-battle = { path = "crates/dde-battle" }
+dde-audio = { path = "crates/dde-audio" }
+dde-ai = { path = "crates/dde-ai" }
+dde-export = { path = "crates/dde-export" }
+
+# Main binary dependencies
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+
+[[bin]]
+name = "dde"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 1
+incremental = true

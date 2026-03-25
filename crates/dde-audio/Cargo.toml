@@ -1,0 +1,18 @@
+[package]
+name = "dde-audio"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+dde-core = { path = "../dde-core" }
+
+# Audio
+kira = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }

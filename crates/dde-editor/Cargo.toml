@@ -1,0 +1,19 @@
+[package]
+name = "dde-editor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+dde-core = { path = "../dde-core" }
+dde-render = { path = "../dde-render" }
+dde-db = { path = "../dde-db" }
+
+# UI
+egui = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+tracing = { workspace = true }

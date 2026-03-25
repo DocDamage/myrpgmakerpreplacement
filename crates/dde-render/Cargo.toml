@@ -1,0 +1,33 @@
+[package]
+name = "dde-render"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+dde-core = { path = "../dde-core" }
+dde-db = { path = "../dde-db" }
+
+# Rendering
+wgpu = { workspace = true }
+winit = { workspace = true }
+
+# Window
+raw-window-handle = { workspace = true }
+
+# Math
+glam = { workspace = true }
+bytemuck = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+
+# Image
+image = { workspace = true }
+
+# Async
+pollster = "0.4"

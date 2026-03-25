@@ -1,0 +1,41 @@
+[package]
+name = "dde-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# ECS
+hecs = { workspace = true }
+
+# Concurrency
+crossbeam-channel = { workspace = true }
+parking_lot = { workspace = true }
+
+# Math
+glam = { workspace = true }
+rand = { workspace = true }
+noise = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+bitflags = { workspace = true }
+indexmap = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
