@@ -19,7 +19,9 @@ The engine follows a modular workspace architecture with the following crates:
 | `dde-ai` | Python FastAPI sidecar client | ✅ Foundation complete |
 | `dde-export` | MZ export, packaging | ✅ Foundation complete |
 
-## Week 1 Deliverables ✅ COMPLETE
+## Week 1 & 2 Deliverables ✅ COMPLETE
+
+### Week 1
 
 | Deliverable | Status | Notes |
 |-------------|--------|-------|
@@ -30,6 +32,17 @@ The engine follows a modular workspace architecture with the following crates:
 | Event bus skeleton | ✅ | crossbeam-channel, typed events |
 | Basic camera | ✅ | Smooth follow, centered on world |
 | Project file handling | ✅ | .dde SQLite files, CLI interface |
+
+### Week 2
+
+| Deliverable | Status | Notes |
+|-------------|--------|-------|
+| ECS integration | ✅ | hecs entities, components, queries |
+| Player entity | ✅ | Spawn at center, keyboard movement |
+| Tile collision | ✅ | Walkable checks, blocked edges |
+| NPC entities | ✅ | 5 NPCs spawned at init |
+| Camera follow | ✅ | Exponential decay, follows player |
+| Input system | ✅ | WASD/arrows, Shift to run |
 
 ### Usage
 
@@ -45,6 +58,8 @@ cargo run
 ```
 
 ### Controls
+- **WASD / Arrow Keys** - Move
+- **Shift** - Run (2x speed)
 - **ESC** - Exit
 - Window can be resized
 
@@ -71,7 +86,12 @@ cargo run
   - RngPool (deterministic seeded random)
   - InputState
 - ✅ Core types: Direction4, WorldState, BiomeKind, MapType, EntityKind, Element, GameState
-- ✅ System stubs: Simulation, InputSystem, MovementSystem, AnimationSystem
+- ✅ Systems:
+  - Simulation (fixed 20Hz timestep)
+  - InputSystem (WASD/arrows, Shift, ESC)
+  - MovementSystem (collision detection)
+  - PlayerController (spawn, move, world position)
+  - AnimationSystem (placeholder)
 
 ### Database Layer (dde-db)
 
@@ -89,11 +109,12 @@ cargo run
 
 ### Rendering (dde-render)
 
-- ✅ Renderer placeholder
-- ✅ Camera system with smooth follow, bounds, zoom
+- ✅ wgpu renderer with surface configuration
+- ✅ TileMapRenderer with vertex/index buffers
+- ✅ Camera system with smooth follow, projection, view matrix
 - ✅ Vertex/mesh definitions
 - ✅ WGSL shader foundations
-- ✅ Sprite pipeline foundations
+- ✅ Sprite pipeline with camera uniform buffer
 - ✅ Texture loading placeholder
 
 ### Other Crates
