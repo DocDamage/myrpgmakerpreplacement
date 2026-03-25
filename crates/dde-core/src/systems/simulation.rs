@@ -1,7 +1,7 @@
 //! Simulation systems
 
 use crate::{World, TICK_RATE};
-use crate::events::{EngineEvent, EventBus};
+use crate::events::EventBus;
 use crate::resources::{RngPool, SimTime, SimulationStats};
 
 /// Fixed timestep simulation
@@ -37,7 +37,8 @@ impl Simulation {
             
             // Prevent death spiral
             if ticks_this_frame >= 10 {
-                warn!("Simulation fell behind, dropping {} ticks", self.accumulator.as_millis() / 50);
+                tracing::warn!("Simulation fell behind, dropping {} ticks", 
+                    self.accumulator.as_millis() / 50);
                 self.accumulator = std::time::Duration::ZERO;
                 break;
             }
@@ -49,7 +50,12 @@ impl Simulation {
         self.tick_count += 1;
         self.time.tick();
         
-        // TODO: Run simulation systems
+        // Update simulation stats
+        for (_, stat) in self.stats.stats.iter_mut() {
+            stat.tick();
+        }
+        
+        // TODO: Run simulation systems (AI, physics, etc.)
     }
     
     pub fn tick_count(&self) -> u64 {
@@ -64,5 +70,3 @@ impl Simulation {
         &mut self.rng
     }
 }
-
-use tracing::warn;

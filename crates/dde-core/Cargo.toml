@@ -32,6 +32,9 @@ tracing = { workspace = true }
 # Time
 chrono = { workspace = true }
 
+# Window/Input (for InputSystem)
+winit = { workspace = true }
+
 # Utilities
 uuid = { workspace = true }
 bitflags = { workspace = true }

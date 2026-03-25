@@ -6,4 +6,9 @@
 pub mod animation;
 pub mod input;
 pub mod movement;
+pub mod player;
 pub mod simulation;
+
+pub use input::{InputBindings, InputContext, InputSystem};
+pub use movement::{MovementSystem, TileCollisionMap};
+pub use player::{Player, PlayerController};
