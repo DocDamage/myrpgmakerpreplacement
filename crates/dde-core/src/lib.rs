@@ -12,6 +12,7 @@ pub mod platform;
 pub mod profiler;
 pub mod replay;
 pub mod resources;
+pub mod save;
 pub mod serialization;
 pub mod systems;
 pub mod vibecode;
@@ -29,6 +30,13 @@ pub use replay::{
     verify_replay, BattleInput, Checkpoint, CheckpointSystem, PlayerInput, Replay, ReplayError,
     ReplayGameLoop, ReplayMetadata, ReplayPlayer, ReplayRecorder, ReplayResult, ReplayState,
     TickInputs, VerificationData, REPLAY_FILE_EXTENSION, REPLAY_VERSION,
+};
+
+// Re-export save system types
+pub use save::{
+    encrypt_save, decrypt_save, verify_password, generate_password,
+    EncryptedSave, EncryptionError,
+    SaveManager, SaveConfig, SaveMetadata, SaveError,
 };
 
 use std::time::Duration;

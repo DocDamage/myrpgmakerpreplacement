@@ -13,6 +13,7 @@ pub mod export;
 pub mod hot_reload_panel;
 pub mod live_play;
 pub mod profiler_panel;
+pub mod save_panel;
 pub mod sync_panel;
 pub mod tilemap;
 pub mod timeline;
@@ -27,6 +28,7 @@ pub use documentation_panel::{DocumentationPanel, ExportFormat, GeneratedDocs};
 pub use hot_reload_panel::HotReloadPanel;
 pub use live_play::{CameraState, EditorController, PlayMode};
 pub use profiler_panel::ProfilerPanel;
+pub use save_panel::SavePanel;
 pub use sync_panel::SyncPanel;
 pub use timeline::*;
 pub use visual_script::canvas::CanvasStyle;
@@ -55,6 +57,8 @@ pub struct Editor {
     pub documentation_panel: DocumentationPanel,
     /// Hot-reload panel
     pub hot_reload_panel: HotReloadPanel,
+    /// Save manager panel
+    pub save_panel: SavePanel,
 }
 
 impl Editor {
@@ -70,6 +74,7 @@ impl Editor {
             visual_script_editor: VisualScriptEditor::new(),
             documentation_panel: DocumentationPanel::new(),
             hot_reload_panel: HotReloadPanel::new(),
+            save_panel: SavePanel::default(),
         }
     }
 

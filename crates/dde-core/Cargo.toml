@@ -40,5 +40,11 @@ uuid = { workspace = true }
 bitflags = { workspace = true }
 indexmap = { workspace = true }
 
+# Encryption
+aes-gcm = "0.10"
+pbkdf2 = "0.12"
+sha2 = "0.10"
+# (using rand from workspace)
+
 [dev-dependencies]
 pretty_assertions = { workspace = true }
