@@ -260,7 +260,7 @@ pub fn crdt_to_sqlite_ops(crdt: &EntityCrdt) -> Vec<SqliteOp> {
                     "data".to_string(),
                 ],
                 values: vec![
-                    serde_json::json!(entity.to_bits().get() as u64),
+                    serde_json::json!(entity.to_bits().get()),
                     serde_json::json!(component_data.component_type.clone()),
                     component_data.data.clone(),
                 ],

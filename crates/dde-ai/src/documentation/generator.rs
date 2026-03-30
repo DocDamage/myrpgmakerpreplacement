@@ -42,16 +42,16 @@ pub trait LlmClient: Send + Sync {
 
 /// Default LLM client implementation
 pub struct DefaultLlmClient {
-    base_url: String,
-    client: reqwest::Client,
+    _base_url: String,
+    _client: reqwest::Client,
 }
 
 impl DefaultLlmClient {
     /// Create a new LLM client
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
-            base_url: base_url.into(),
-            client: reqwest::Client::new(),
+            _base_url: base_url.into(),
+            _client: reqwest::Client::new(),
         }
     }
 
@@ -73,7 +73,7 @@ impl LlmClient for DefaultLlmClient {
 /// Generates documentation from world data
 pub struct DocGenerator {
     llm_client: Box<dyn LlmClient>,
-    template_engine: TemplateEngine,
+    _template_engine: TemplateEngine,
 }
 
 impl DocGenerator {
@@ -81,7 +81,7 @@ impl DocGenerator {
     pub fn new() -> Self {
         Self {
             llm_client: Box::new(DefaultLlmClient::default_local()),
-            template_engine: TemplateEngine,
+            _template_engine: TemplateEngine,
         }
     }
 
@@ -89,7 +89,7 @@ impl DocGenerator {
     pub fn with_client<C: LlmClient + 'static>(client: C) -> Self {
         Self {
             llm_client: Box::new(client),
-            template_engine: TemplateEngine,
+            _template_engine: TemplateEngine,
         }
     }
 
@@ -491,6 +491,7 @@ impl DocGenerator {
     }
 
     /// Extract bullet points from LLM response
+    #[allow(clippy::manual_strip)]
     fn extract_bullets(&self, text: &str, section_name: &str) -> Vec<String> {
         let section = self.extract_section(text, section_name);
         section

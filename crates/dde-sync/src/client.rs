@@ -41,7 +41,7 @@ pub struct SyncClient {
     /// Local client ID
     client_id: Uuid,
     /// Current project session
-    session_id: Option<Uuid>,
+    _session_id: Option<Uuid>,
     /// Channel for outgoing messages
     tx: Option<mpsc::UnboundedSender<SyncMessage>>,
     /// Collaborator presence
@@ -87,7 +87,7 @@ impl SyncClient {
             connection: None,
             state: Arc::new(RwLock::new(ConnectionState::Disconnected)),
             client_id: Uuid::new_v4(),
-            session_id: None,
+            _session_id: None,
             tx: None,
             collaborators: Arc::new(RwLock::new(HashMap::new())),
             locked_entities: Arc::new(RwLock::new(HashSet::new())),
@@ -338,6 +338,7 @@ impl SyncClient {
     }
 
     /// Handle incoming messages
+    #[allow(clippy::borrowed_box)]
     async fn handle_incoming(
         client_id: Uuid,
         msg: SyncMessage,
