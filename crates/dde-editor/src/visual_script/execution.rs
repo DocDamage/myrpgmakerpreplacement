@@ -5,6 +5,10 @@
 
 use super::compiler::{AnimationTarget, CompiledScript, Condition, EntityRef, GameEvent};
 use super::nodes::{CompareOp, MathOp, StatType, ValueSource};
+use dde_core::components::{Inventory, Name, Position, Stats};
+use dde_core::events::{
+    EngineEvent, EventBus,
+};
 use dde_core::{Entity, World};
 use std::collections::HashMap;
 
@@ -28,6 +32,12 @@ pub enum ExecutionError {
 
     #[error("Stack overflow")]
     StackOverflow,
+
+    #[error("ECS error: {0}")]
+    Ecs(String),
+
+    #[error("Component not found: {0}")]
+    ComponentNotFound(String),
 }
 
 /// Result type for execution
@@ -78,7 +88,9 @@ impl ScriptValue {
             ScriptValue::String(s) => s.clone(),
             ScriptValue::Number(n) => n.to_string(),
             ScriptValue::Bool(b) => b.to_string(),
-            _ => String::new(),
+            ScriptValue::Entity(e) => format!("{:?}", e),
+            ScriptValue::List(l) => format!("{:?}", l),
+            ScriptValue::None => "none".to_string(),
         }
     }
 
@@ -92,6 +104,11 @@ impl ScriptValue {
             ScriptValue::Entity(_) => "entity",
             ScriptValue::List(_) => "list",
         }
+    }
+
+    /// Create from i32
+    pub fn from_i32(value: i32) -> Self {
+        ScriptValue::Number(value as f64)
     }
 }
 
@@ -128,7 +145,6 @@ pub enum ExecutionState {
 }
 
 /// Script executor that runs compiled visual scripts
-#[derive(Debug)]
 pub struct ScriptExecutor {
     /// Global variables
     pub variables: HashMap<String, ScriptValue>,
@@ -146,6 +162,10 @@ pub struct ScriptExecutor {
     break_requested: bool,
     /// Continue flag for loop control
     continue_requested: bool,
+    /// Event bus for sending events
+    event_bus: Option<EventBus>,
+    /// Self entity reference (the entity running this script)
+    self_entity: Option<Entity>,
 }
 
 impl Default for ScriptExecutor {
@@ -166,6 +186,8 @@ impl ScriptExecutor {
             execution_time: 0.0,
             break_requested: false,
             continue_requested: false,
+            event_bus: None,
+            self_entity: None,
         }
     }
 
@@ -179,6 +201,36 @@ impl ScriptExecutor {
     pub fn with_timeout(mut self, timeout_secs: f32) -> Self {
         self.timeout_secs = timeout_secs;
         self
+    }
+
+    /// Set the event bus for sending events
+    pub fn with_event_bus(mut self, event_bus: EventBus) -> Self {
+        self.event_bus = Some(event_bus);
+        self
+    }
+
+    /// Set the self entity reference
+    pub fn with_self_entity(mut self, entity: Entity) -> Self {
+        self.self_entity = Some(entity);
+        self
+    }
+
+    /// Get the event bus reference
+    pub fn event_bus(&self) -> Option<&EventBus> {
+        self.event_bus.as_ref()
+    }
+
+    /// Get the event bus mutable reference
+    pub fn event_bus_mut(&mut self) -> Option<&mut EventBus> {
+        self.event_bus.as_mut()
+    }
+
+    /// Send an EngineEvent through the event bus
+    /// Note: This is a placeholder - the actual event bus integration would need
+    /// to be implemented based on the specific event bus architecture
+    fn send_engine_event(&self, _event: EngineEvent) {
+        // TODO: Implement event bus integration
+        // For now, events are logged via tracing
     }
 
     /// Get a variable value
@@ -212,6 +264,40 @@ impl ScriptExecutor {
             self.set_variable(name, value);
             Ok(())
         }
+    }
+
+    /// Resolve an EntityRef to an actual Entity
+    fn resolve_entity(&self, entity_ref: EntityRef, world: &World) -> ExecutionResult<Entity> {
+        match entity_ref {
+            EntityRef::SelfEntity => self
+                .self_entity
+                .ok_or_else(|| ExecutionError::EntityNotFound(entity_ref)),
+            EntityRef::Player => Self::find_player_entity(world)
+                .ok_or_else(|| ExecutionError::EntityNotFound(entity_ref)),
+            EntityRef::Target => Err(ExecutionError::EntityNotFound(entity_ref)),
+            EntityRef::ById(_id) => {
+                // Try to construct entity from bits - this is a best effort
+                // In a real implementation, you'd have a proper entity lookup
+                Err(ExecutionError::EntityNotFound(entity_ref))
+            }
+        }
+    }
+
+    /// Find the player entity in the world
+    fn find_player_entity(world: &World) -> Option<Entity> {
+        // Query for player entity - typically has a Player marker component
+        // or is marked with EntityKind::Player
+        use dde_core::components::EntityKindComp;
+        use dde_core::EntityKind;
+
+        // Use query to iterate over entities (immutable borrow of world)
+        let mut query = world.query::<&EntityKindComp>();
+        for (entity, kind) in query.iter() {
+            if kind.kind == EntityKind::Player {
+                return Some(entity);
+            }
+        }
+        None
     }
 
     /// Execute a compiled script
@@ -366,10 +452,44 @@ impl ScriptExecutor {
         x: i32,
         y: i32,
         relative: bool,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
-        // In a real implementation, this would query the world for the entity
-        // and update its position component
+        let entity = self.resolve_entity(entity_ref, world)?;
+
+        // Get current position (in a scope to drop the immutable borrow before mutable borrow)
+        let new_pos = {
+            let mut query = world
+                .query_one::<&Position>(entity)
+                .map_err(|_| ExecutionError::ComponentNotFound("Position".to_string()))?;
+            let current_pos = query
+                .get()
+                .ok_or_else(|| ExecutionError::ComponentNotFound("Position".to_string()))?;
+
+            if relative {
+                Position {
+                    x: current_pos.x + x,
+                    y: current_pos.y + y,
+                    z: current_pos.z,
+                }
+            } else {
+                Position {
+                    x,
+                    y,
+                    z: current_pos.z,
+                }
+            }
+        };
+
+        // Update position using hecs query_one_mut
+        if let Ok((pos,)) = world.query_one_mut::<(&mut Position,)>(entity) {
+            let from = (pos.x, pos.y);
+            pos.x = new_pos.x;
+            pos.y = new_pos.y;
+
+            // Entity moved event would be sent here via event bus
+            tracing::debug!("Entity {:?} moved from {:?} to ({}, {})", entity, from, new_pos.x, new_pos.y);
+        }
+
         tracing::debug!(
             "Move entity {:?} to ({}, {}) relative={}",
             entity_ref,
@@ -384,8 +504,21 @@ impl ScriptExecutor {
         &mut self,
         anim_id: u32,
         target: AnimationTarget,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
+        let entity = match target {
+            AnimationTarget::SelfEntity => self.self_entity,
+            AnimationTarget::Player => Self::find_player_entity(world),
+            AnimationTarget::Target => None,
+        };
+
+        if let Some(entity) = entity {
+            // Start animation on the entity if it has animation components
+            // Animation triggering would go here
+            // For now just log it - real implementation would use event bus
+            tracing::debug!("Starting animation {} on entity {:?}", anim_id, entity);
+        }
+
         tracing::debug!("Play animation {} on {:?}", anim_id, target);
         Ok(())
     }
@@ -395,8 +528,20 @@ impl ScriptExecutor {
         map_id: u32,
         x: i32,
         y: i32,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
+        let player = Self::find_player_entity(world)
+            .ok_or_else(|| ExecutionError::EntityNotFound(EntityRef::Player))?;
+
+        // Update player position using hecs query_one_mut
+        if let Ok((pos,)) = world.query_one_mut::<(&mut Position,)>(player) {
+            pos.x = x;
+            pos.y = y;
+        }
+
+        // Teleport event would be sent here via event bus
+        tracing::debug!("Player teleported to map {} at ({}, {})", map_id, x, y);
+
         tracing::debug!("Teleport to map {} at ({}, {})", map_id, x, y);
         Ok(())
     }
@@ -406,8 +551,20 @@ impl ScriptExecutor {
         template_id: u32,
         x: i32,
         y: i32,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
+        // Spawn a new entity with basic components
+        let _entity = world.spawn((
+            Position { x, y, z: 0 },
+            Name {
+                display: format!("Entity_{}", template_id),
+                internal: format!("entity_{}", template_id),
+            },
+        ));
+
+        // Entity spawned event would be sent here via event bus
+        tracing::debug!("Entity spawned with template {} at ({}, {})", template_id, x, y);
+
         tracing::debug!("Spawn entity {} at ({}, {})", template_id, x, y);
         Ok(())
     }
@@ -415,8 +572,16 @@ impl ScriptExecutor {
     fn execute_despawn_entity(
         &mut self,
         entity_ref: EntityRef,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
+        let entity = self.resolve_entity(entity_ref, world)?;
+
+        // Despawn the entity
+        world.despawn(entity).map_err(|e| ExecutionError::Ecs(e.to_string()))?;
+
+        // Entity destroyed event would be sent here via event bus
+        tracing::debug!("Entity {:?} destroyed", entity);
+
         tracing::debug!("Despawn entity {:?}", entity_ref);
         Ok(())
     }
@@ -427,6 +592,9 @@ impl ScriptExecutor {
         transition: &str,
         _world: &mut World,
     ) -> ExecutionResult<()> {
+        // Battle triggered event would be sent here via event bus
+        tracing::debug!("Battle started with encounter {} (transition: {})", encounter_id, transition);
+
         tracing::debug!(
             "Start battle {} with transition {}",
             encounter_id,
@@ -439,8 +607,24 @@ impl ScriptExecutor {
         &mut self,
         target: EntityRef,
         amount: i32,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
+        let entity = self.resolve_entity(target, world)?;
+
+        // Get the entity's stats and modify health using hecs query_one_mut
+        if let Ok((stats,)) = world.query_one_mut::<(&mut Stats,)>(entity) {
+            let old_hp = stats.hp;
+
+            if amount >= 0 {
+                stats.heal(amount);
+            } else {
+                stats.take_damage(-amount);
+            }
+
+            // Damage dealt event would be sent here via event bus
+            tracing::debug!("Entity {:?} health modified by {} ({} -> {})", entity, amount, old_hp, stats.hp);
+        }
+
         tracing::debug!("Modify health of {:?} by {}", target, amount);
         Ok(())
     }
@@ -449,8 +633,18 @@ impl ScriptExecutor {
         &mut self,
         target: EntityRef,
         amount: u32,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
+        let entity = self.resolve_entity(target, world)?;
+
+        // Update entity's EXP using hecs query_one_mut
+        if let Ok((stats,)) = world.query_one_mut::<(&mut Stats,)>(entity) {
+            stats.exp += amount as i32;
+
+            // EXP gained event would be sent here via event bus
+            tracing::debug!("Entity {:?} gained {} EXP", entity, amount);
+        }
+
         tracing::debug!("Grant {} EXP to {:?}", amount, target);
         Ok(())
     }
@@ -462,9 +656,11 @@ impl ScriptExecutor {
         _portrait: Option<u32>,
         _world: &mut World,
     ) -> ExecutionResult<()> {
+        // Dialogue started event would be sent here via event bus
+        tracing::debug!("Dialogue started: {} - {}", speaker, text);
+
         tracing::debug!("Show dialogue from {}: {}", speaker, text);
-        // In a real implementation, this would trigger the dialogue system
-        // and pause execution until the dialogue is complete
+        // Pause execution until dialogue is complete
         self.state = ExecutionState::Paused { resume_after: 0.0 };
         Ok(())
     }
@@ -475,11 +671,17 @@ impl ScriptExecutor {
         duration_secs: f32,
         _world: &mut World,
     ) -> ExecutionResult<()> {
+        // Notification event would be sent here via event bus
+        tracing::debug!("Notification: {} ({}s)", text, duration_secs);
+
         tracing::debug!("Show notification: {} ({}s)", text, duration_secs);
         Ok(())
     }
 
     fn execute_play_sfx(&mut self, sound_id: &str, _world: &mut World) -> ExecutionResult<()> {
+        // Play SFX event would be sent here via event bus
+        tracing::debug!("Playing SFX: {}", sound_id);
+
         tracing::debug!("Play SFX: {}", sound_id);
         Ok(())
     }
@@ -490,6 +692,9 @@ impl ScriptExecutor {
         fade_ms: u32,
         _world: &mut World,
     ) -> ExecutionResult<()> {
+        // BGM change event would be sent here via event bus
+        tracing::debug!("Changing BGM to {} with {}ms fade", bgm_id, fade_ms);
+
         tracing::debug!("Change BGM to {} with {}ms fade", bgm_id, fade_ms);
         Ok(())
     }
@@ -498,8 +703,20 @@ impl ScriptExecutor {
         &mut self,
         item_id: u32,
         quantity: u32,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
+        let player = Self::find_player_entity(world)
+            .ok_or_else(|| ExecutionError::EntityNotFound(EntityRef::Player))?;
+
+        // Add item to player's inventory using hecs query_one_mut
+        if let Ok((inventory,)) = world.query_one_mut::<(&mut Inventory,)>(player) {
+            const DEFAULT_MAX_STACK: u32 = 99;
+            inventory.add_item(item_id, quantity, DEFAULT_MAX_STACK);
+
+            // Item acquired - no specific EngineEvent for this, could add later
+            tracing::debug!("Item acquired: {} x{}", item_id, quantity);
+        }
+
         tracing::debug!("Give item {} x{}", item_id, quantity);
         Ok(())
     }
@@ -508,8 +725,21 @@ impl ScriptExecutor {
         &mut self,
         item_id: u32,
         quantity: u32,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<()> {
+        let player = Self::find_player_entity(world)
+            .ok_or_else(|| ExecutionError::EntityNotFound(EntityRef::Player))?;
+
+        // Remove item from player's inventory using hecs query_one_mut
+        if let Ok((inventory,)) = world.query_one_mut::<(&mut Inventory,)>(player) {
+            let success = inventory.remove_item(item_id, quantity);
+
+            if success {
+                // Item removed - no specific EngineEvent for this, could add later
+                tracing::debug!("Item removed: {} x{}", item_id, quantity);
+            }
+        }
+
         tracing::debug!("Remove item {} x{}", item_id, quantity);
         Ok(())
     }
@@ -520,6 +750,13 @@ impl ScriptExecutor {
         value: bool,
         _world: &mut World,
     ) -> ExecutionResult<()> {
+        // Store the flag in a special variable
+        let flag_var = format!("__flag_{}", flag_key);
+        self.set_variable(flag_var, ScriptValue::Bool(value));
+
+        // Game flag changed event would be sent here via event bus
+        tracing::debug!("Game flag {} set to {}", flag_key, value);
+
         tracing::debug!("Set game flag {} = {}", flag_key, value);
         Ok(())
     }
@@ -563,6 +800,9 @@ impl ScriptExecutor {
     }
 
     fn execute_start_quest(&mut self, quest_id: u32, _world: &mut World) -> ExecutionResult<()> {
+        // Quest started event would be sent here via event bus
+        tracing::debug!("Quest {} started", quest_id);
+
         tracing::debug!("Start quest {}", quest_id);
         Ok(())
     }
@@ -574,6 +814,9 @@ impl ScriptExecutor {
         progress: u32,
         _world: &mut World,
     ) -> ExecutionResult<()> {
+        // Quest updated event would be sent here via event bus
+        tracing::debug!("Quest {} objective {} updated to progress {}", quest_id, objective_id, progress);
+
         tracing::debug!(
             "Update quest {} objective {} to progress {}",
             quest_id,
@@ -584,6 +827,9 @@ impl ScriptExecutor {
     }
 
     fn execute_complete_quest(&mut self, quest_id: u32, _world: &mut World) -> ExecutionResult<()> {
+        // Quest completed event would be sent here via event bus
+        tracing::debug!("Quest {} completed", quest_id);
+
         tracing::debug!("Complete quest {}", quest_id);
         Ok(())
     }
@@ -709,9 +955,16 @@ impl ScriptExecutor {
             Condition::Literal(value) => Ok(*value),
 
             Condition::HasItem { item_id, quantity } => {
-                // Query world for inventory
-                tracing::debug!("Check has item {} x{}", item_id, quantity);
-                Ok(true) // Placeholder
+                // Query player's inventory for item using hecs query_one
+                if let Some(player) = Self::find_player_entity(world) {
+                    let mut query = world.query_one::<&Inventory>(player);
+                    if let Ok(ref mut q) = query {
+                        if let Some(inventory) = q.get() {
+                            return Ok(inventory.has_item(*item_id, *quantity));
+                        }
+                    }
+                }
+                Ok(false)
             }
 
             Condition::StatCheck {
@@ -724,14 +977,22 @@ impl ScriptExecutor {
             }
 
             Condition::QuestStage { quest_id, stage } => {
-                tracing::debug!("Check quest {} at stage {}", quest_id, stage);
-                Ok(true) // Placeholder
+                // Check quest stage from game state
+                let quest_var = format!("__quest_{}_stage", quest_id);
+                let current_stage = self
+                    .get_variable(&quest_var)
+                    .map(|v| v.as_number() as u32)
+                    .unwrap_or(0);
+                Ok(current_stage >= *stage)
             }
 
             Condition::TimeOfDay { min_hour, max_hour } => {
-                // Query world for current time
-                tracing::debug!("Check time between {} and {}", min_hour, max_hour);
-                Ok(true) // Placeholder
+                // Get current time from world/game state
+                let current_hour = self
+                    .get_variable("__time_hour")
+                    .map(|v| v.as_number() as u8)
+                    .unwrap_or(12);
+                Ok(current_hour >= *min_hour && current_hour <= *max_hour)
             }
 
             Condition::RandomChance { percent } => {
@@ -740,9 +1001,13 @@ impl ScriptExecutor {
             }
 
             Condition::GameFlag { flag_key, expected } => {
-                // Query world for game flag
-                tracing::debug!("Check flag {} = {}", flag_key, expected);
-                Ok(true) // Placeholder
+                // Check game flag from variables
+                let flag_var = format!("__flag_{}", flag_key);
+                let value = self
+                    .get_variable(&flag_var)
+                    .map(|v| v.as_bool())
+                    .unwrap_or(false);
+                Ok(value == *expected)
             }
 
             Condition::Compare {
@@ -767,16 +1032,38 @@ impl ScriptExecutor {
         }
     }
 
-    fn get_stat_value(&self, stat: StatType, _world: &mut World) -> ExecutionResult<i32> {
-        // In a real implementation, query the entity's stats component
-        tracing::debug!("Get stat {:?}", stat);
-        Ok(100) // Placeholder
+    fn get_stat_value(&self, stat: StatType, world: &mut World) -> ExecutionResult<i32> {
+        // Get the player entity and query its stats
+        let player = Self::find_player_entity(world)
+            .ok_or_else(|| ExecutionError::EntityNotFound(EntityRef::Player))?;
+
+        // Query stats using hecs query_one
+        let mut query = world
+            .query_one::<&Stats>(player)
+            .map_err(|e| ExecutionError::Ecs(e.to_string()))?;
+        let stats = query.get()
+            .ok_or_else(|| ExecutionError::ComponentNotFound("Stats".to_string()))?;
+
+        let value = match stat {
+            StatType::Health => stats.hp,
+            StatType::MaxHealth => stats.max_hp,
+            StatType::Mana => stats.mp,
+            StatType::MaxMana => stats.max_mp,
+            StatType::Strength => stats.str,
+            StatType::Defense => stats.def,
+            StatType::Speed => stats.spd,
+            StatType::Level => stats.level,
+            StatType::Exp => stats.exp,
+            StatType::Gold => stats.luck, // Gold not in stats, use luck as placeholder
+        };
+
+        Ok(value)
     }
 
     fn evaluate_value_source(
         &self,
         source: &ValueSource,
-        _world: &mut World,
+        world: &mut World,
     ) -> ExecutionResult<f64> {
         match source {
             ValueSource::Literal(value) => Ok(*value),
@@ -786,8 +1073,29 @@ impl ScriptExecutor {
                 .ok_or_else(|| ExecutionError::UnknownVariable(name.clone())),
             ValueSource::Stat { entity, stat } => {
                 // Query entity stat
-                tracing::debug!("Get stat {:?} for entity {:?}", stat, entity);
-                Ok(100.0) // Placeholder
+                let _entity_ref = match entity {
+                    super::nodes::EntityRef::SelfEntity => EntityRef::SelfEntity,
+                    super::nodes::EntityRef::Player => EntityRef::Player,
+                    super::nodes::EntityRef::Target => EntityRef::Target,
+                    super::nodes::EntityRef::ById(id) => EntityRef::ById(*id),
+                };
+
+                // Map StatType from nodes to compiler
+                let stat_type = match stat {
+                    super::nodes::StatType::Health => StatType::Health,
+                    super::nodes::StatType::MaxHealth => StatType::MaxHealth,
+                    super::nodes::StatType::Mana => StatType::Mana,
+                    super::nodes::StatType::MaxMana => StatType::MaxMana,
+                    super::nodes::StatType::Strength => StatType::Strength,
+                    super::nodes::StatType::Defense => StatType::Defense,
+                    super::nodes::StatType::Speed => StatType::Speed,
+                    super::nodes::StatType::Level => StatType::Level,
+                    super::nodes::StatType::Exp => StatType::Exp,
+                    super::nodes::StatType::Gold => StatType::Gold,
+                };
+
+                let value = self.get_stat_value(stat_type, world)?;
+                Ok(value as f64)
             }
         }
     }
@@ -834,10 +1142,16 @@ fn compare_values(left: i32, operator: CompareOp, right: i32) -> bool {
 }
 
 /// Global script registry for managing active scripts
-#[derive(Debug, Default)]
 pub struct ScriptRegistry {
     scripts: HashMap<u64, ScriptExecutor>,
     next_id: u64,
+    event_bus: Option<EventBus>,
+}
+
+impl Default for ScriptRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ScriptRegistry {
@@ -846,7 +1160,22 @@ impl ScriptRegistry {
         Self {
             scripts: HashMap::new(),
             next_id: 1,
+            event_bus: None,
         }
+    }
+
+    /// Create a new script registry with an event bus
+    pub fn with_event_bus(event_bus: EventBus) -> Self {
+        Self {
+            scripts: HashMap::new(),
+            next_id: 1,
+            event_bus: Some(event_bus),
+        }
+    }
+
+    /// Set the event bus for all scripts in this registry
+    pub fn set_event_bus(&mut self, event_bus: EventBus) {
+        self.event_bus = Some(event_bus);
     }
 
     /// Register a new script execution
@@ -895,6 +1224,30 @@ impl ScriptRegistry {
     pub fn active_count(&self) -> usize {
         self.scripts.len()
     }
+
+    /// Process pending events from all script event buses
+    pub fn process_events(&self) -> usize {
+        if let Some(ref bus) = self.event_bus {
+            bus.process_events()
+        } else {
+            0
+        }
+    }
+}
+
+// ==================== Event Helper Functions ====================
+
+/// Helper function to create a notification event
+pub fn create_notification_event(text: String, duration_secs: f32) -> EngineEvent {
+    EngineEvent::NotificationRequested {
+        text,
+        duration_secs,
+    }
+}
+
+/// Helper function to create a game flag changed event
+pub fn create_game_flag_event(flag_key: String, value: bool) -> EngineEvent {
+    EngineEvent::GameFlagChanged { flag_key, value }
 }
 
 #[cfg(test)]
@@ -955,5 +1308,173 @@ mod tests {
 
         registry.remove(id);
         assert_eq!(registry.active_count(), 0);
+    }
+
+    #[test]
+    fn test_compare_values() {
+        assert!(compare_values(5, CompareOp::Equal, 5));
+        assert!(!compare_values(5, CompareOp::Equal, 3));
+        assert!(compare_values(5, CompareOp::GreaterThan, 3));
+        assert!(!compare_values(3, CompareOp::GreaterThan, 5));
+        assert!(compare_values(3, CompareOp::LessThan, 5));
+        assert!(compare_values(5, CompareOp::GreaterThanOrEqual, 5));
+        assert!(compare_values(5, CompareOp::LessThanOrEqual, 5));
+        assert!(compare_values(5, CompareOp::NotEqual, 3));
+    }
+
+    #[test]
+    fn test_event_bus_integration() {
+        let event_bus = EventBus::new();
+        let executor = ScriptExecutor::new().with_event_bus(event_bus);
+
+        assert!(executor.event_bus().is_some());
+    }
+
+    #[test]
+    fn test_condition_evaluation_literal() {
+        let executor = ScriptExecutor::new();
+        let mut world = World::new();
+
+        assert_eq!(
+            executor.evaluate_condition(&Condition::Literal(true), &mut world),
+            Ok(true)
+        );
+        assert_eq!(
+            executor.evaluate_condition(&Condition::Literal(false), &mut world),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn test_condition_evaluation_game_flag() {
+        let mut executor = ScriptExecutor::new();
+        let mut world = World::new();
+
+        // Set a flag
+        executor
+            .execute_set_game_flag("test_flag", true, &mut world)
+            .unwrap();
+
+        // Check the flag
+        assert_eq!(
+            executor.evaluate_condition(
+                &Condition::GameFlag {
+                    flag_key: "test_flag".to_string(),
+                    expected: true,
+                },
+                &mut world
+            ),
+            Ok(true)
+        );
+
+        assert_eq!(
+            executor.evaluate_condition(
+                &Condition::GameFlag {
+                    flag_key: "test_flag".to_string(),
+                    expected: false,
+                },
+                &mut world
+            ),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn test_math_operations() {
+        let mut executor = ScriptExecutor::new();
+
+        // Test Set
+        executor.set_variable("num", ScriptValue::Number(10.0));
+        executor.execute_modify_variable("num", MathOp::Set, 5).unwrap();
+        assert_eq!(
+            executor.get_variable("num"),
+            Some(&ScriptValue::Number(5.0))
+        );
+
+        // Test Add
+        executor.execute_modify_variable("num", MathOp::Add, 3).unwrap();
+        assert_eq!(
+            executor.get_variable("num"),
+            Some(&ScriptValue::Number(8.0))
+        );
+
+        // Test Subtract
+        executor.execute_modify_variable("num", MathOp::Subtract, 2).unwrap();
+        assert_eq!(
+            executor.get_variable("num"),
+            Some(&ScriptValue::Number(6.0))
+        );
+
+        // Test Multiply
+        executor.execute_modify_variable("num", MathOp::Multiply, 2).unwrap();
+        assert_eq!(
+            executor.get_variable("num"),
+            Some(&ScriptValue::Number(12.0))
+        );
+
+        // Test Divide
+        executor.execute_modify_variable("num", MathOp::Divide, 3).unwrap();
+        assert_eq!(
+            executor.get_variable("num"),
+            Some(&ScriptValue::Number(4.0))
+        );
+
+        // Test Modulo
+        executor.set_variable("num", ScriptValue::Number(10.0));
+        executor.execute_modify_variable("num", MathOp::Modulo, 3).unwrap();
+        assert_eq!(
+            executor.get_variable("num"),
+            Some(&ScriptValue::Number(1.0))
+        );
+    }
+
+    #[test]
+    fn test_division_by_zero() {
+        let mut executor = ScriptExecutor::new();
+        executor.set_variable("num", ScriptValue::Number(10.0));
+
+        let result = executor.execute_modify_variable("num", MathOp::Divide, 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_value_source_evaluation() {
+        let executor = ScriptExecutor::new();
+        let mut world = World::new();
+
+        // Test literal
+        assert_eq!(
+            executor.evaluate_value_source(&ValueSource::Literal(42.0), &mut world),
+            Ok(42.0)
+        );
+    }
+}
+
+// ==================== EngineEvent Extensions for Script System ====================
+
+/// Extension trait for EngineEvent to add script-related events
+pub trait EngineEventExt {
+    /// Create a notification requested event
+    fn notification_requested(text: String, duration_secs: f32) -> EngineEvent;
+    /// Create a game flag changed event
+    fn game_flag_changed(flag_key: String, value: bool) -> EngineEvent;
+}
+
+impl EngineEventExt for EngineEvent {
+    fn notification_requested(text: String, _duration_secs: f32) -> EngineEvent {
+        // Use SimStatChanged as a workaround for missing variant
+        EngineEvent::SimStatChanged {
+            key: format!("notification_{}", text),
+            old: 0.0,
+            new: 1.0,
+        }
+    }
+
+    fn game_flag_changed(flag_key: String, value: bool) -> EngineEvent {
+        EngineEvent::SimStatChanged {
+            key: format!("flag_{}", flag_key),
+            old: if value { 0.0 } else { 1.0 },
+            new: if value { 1.0 } else { 0.0 },
+        }
     }
 }

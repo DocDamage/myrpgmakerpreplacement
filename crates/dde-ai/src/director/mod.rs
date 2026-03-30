@@ -24,7 +24,7 @@ pub use generator::{
     TemplateQuestGenerator,
 };
 pub use pacing::{ContentType, PacingController, TensionCurve};
-pub use quest_pool::{ActiveQuest, ProposalId, QuestHistory, QuestOutcome, QuestPool, QuestStage};
+pub use quest_pool::{ActiveQuest, ProposalId, QuestHistory, QuestOutcome, QuestPool, QuestPoolStats, QuestStage};
 
 /// The main AI Director that orchestrates content generation
 pub struct DirectorSystem {

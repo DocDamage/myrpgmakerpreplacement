@@ -243,11 +243,24 @@ impl BtDebugger {
         if let Some(runner) = runner {
             ui.collapsing("Blackboard", |ui| {
                 let blackboard = runner.blackboard();
-                if blackboard.keys().next().is_none() {
+                let keys: Vec<_> = blackboard.keys().collect();
+                if keys.is_empty() {
                     ui.label("No variables set");
                 } else {
-                    for key in blackboard.keys() {
-                        ui.label(format!("{}: (value)", key)); // TODO: Display actual values
+                    for key in keys {
+                        // Display the key and a placeholder for value (actual type unknown)
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(key).monospace().small());
+                            ui.label("=");
+                            // Try to get value as string representation
+                            let value_str = blackboard.get_string(key)
+                                .map(|s| s.to_string())
+                                .or_else(|| blackboard.get_bool(key).map(|b| b.to_string()))
+                                .or_else(|| blackboard.get_int(key).map(|i| i.to_string()))
+                                .or_else(|| blackboard.get_float(key).map(|f| format!("{:.2}", f)))
+                                .unwrap_or_else(|| "<complex>".to_string());
+                            ui.label(RichText::new(value_str).color(Color32::LIGHT_BLUE));
+                        });
                     }
                 }
             });

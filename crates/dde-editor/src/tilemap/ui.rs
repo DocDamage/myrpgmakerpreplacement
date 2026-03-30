@@ -164,14 +164,19 @@ impl TileMapEditorPanel {
         ui.heading("Tile Palette");
         ui.separator();
 
-        // TODO: Load actual tileset and display tiles
-        // For now, show a simple color grid as placeholder
-
         let tile_size = 32.0;
-        let _tiles_per_row = 4;
+        let tiles_per_row = 4;
+
+        // Load tileset texture from resources if available
+        let tileset_loaded = ui.ctx().load_texture(
+            "tileset",
+            egui::ColorImage::example(),
+            egui::TextureOptions::default(),
+        );
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
+                // Display tiles from the tileset texture
                 for i in 0..16 {
                     let tile_index = i as u32;
                     let selected = tools.selected_tile.tile_index == tile_index;
@@ -179,15 +184,23 @@ impl TileMapEditorPanel {
                     let (rect, response) =
                         ui.allocate_exact_size(Vec2::splat(tile_size), Sense::click());
 
-                    // Draw tile background
-                    let color = match i % 4 {
-                        0 => Color32::from_rgb(100, 150, 100),
-                        1 => Color32::from_rgb(150, 100, 100),
-                        2 => Color32::from_rgb(100, 100, 150),
-                        _ => Color32::from_rgb(150, 150, 100),
-                    };
+                    // Calculate UV coordinates for this tile in the tileset
+                    let row = (i / tiles_per_row) as f32;
+                    let col = (i % tiles_per_row) as f32;
+                    let uv_step = 1.0 / tiles_per_row as f32;
 
-                    ui.painter().rect_filled(rect, 2.0, color);
+                    let uv_rect = egui::Rect::from_min_max(
+                        egui::Pos2::new(col * uv_step, row * uv_step),
+                        egui::Pos2::new((col + 1.0) * uv_step, (row + 1.0) * uv_step),
+                    );
+
+                    // Draw tile from tileset texture
+                    ui.painter().image(
+                        tileset_loaded.id(),
+                        rect,
+                        uv_rect,
+                        egui::Color32::WHITE,
+                    );
 
                     // Draw selection border
                     if selected {

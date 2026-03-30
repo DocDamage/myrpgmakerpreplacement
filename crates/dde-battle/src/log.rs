@@ -77,6 +77,12 @@ pub struct LogEntry {
     pub actor: Option<Entity>,
     /// Target entity (if applicable)
     pub target: Option<Entity>,
+    /// Timestamp for when the entry was created (for replay/debugging)
+    pub timestamp: std::time::SystemTime,
+    /// Damage dealt (if applicable)
+    pub damage_dealt: Option<u32>,
+    /// Healing done (if applicable)
+    pub healing_done: Option<u32>,
 }
 
 impl LogEntry {
@@ -89,7 +95,22 @@ impl LogEntry {
             message: message.into(),
             actor: None,
             target: None,
+            timestamp: std::time::SystemTime::now(),
+            damage_dealt: None,
+            healing_done: None,
         }
+    }
+
+    /// Set damage dealt value
+    pub fn with_damage(mut self, damage: u32) -> Self {
+        self.damage_dealt = Some(damage);
+        self
+    }
+
+    /// Set healing done value
+    pub fn with_healing(mut self, healing: u32) -> Self {
+        self.healing_done = Some(healing);
+        self
     }
 
     /// Set the actor entity
@@ -454,6 +475,227 @@ impl BattleLog {
             self.entries.pop_front();
         }
     }
+
+    /// Get all unique combatants (entities that appear as actor or target)
+    pub fn get_combatants(&self) -> Vec<Entity> {
+        let mut combatants = std::collections::HashSet::new();
+        for entry in &self.entries {
+            if let Some(actor) = entry.actor {
+                combatants.insert(actor);
+            }
+            if let Some(target) = entry.target {
+                combatants.insert(target);
+            }
+        }
+        combatants.into_iter().collect()
+    }
+
+    /// Get total damage dealt by a combatant
+    pub fn get_total_damage_dealt(&self, entity: Entity) -> u32 {
+        self.entries
+            .iter()
+            .filter(|e| e.actor == Some(entity))
+            .filter(|e| matches!(e.entry_type, LogEntryType::Damage | LogEntryType::Crit))
+            .filter_map(|e| e.damage_dealt)
+            .sum()
+    }
+
+    /// Get total damage taken by a combatant
+    pub fn get_total_damage_taken(&self, entity: Entity) -> u32 {
+        self.entries
+            .iter()
+            .filter(|e| e.target == Some(entity))
+            .filter(|e| matches!(e.entry_type, LogEntryType::Damage | LogEntryType::Crit))
+            .filter_map(|e| e.damage_dealt)
+            .sum()
+    }
+
+    /// Get total healing done by a combatant
+    pub fn get_total_healing_done(&self, entity: Entity) -> u32 {
+        self.entries
+            .iter()
+            .filter(|e| e.actor == Some(entity))
+            .filter(|e| e.entry_type == LogEntryType::Heal)
+            .filter_map(|e| e.healing_done)
+            .sum()
+    }
+
+    /// Get total healing received by a combatant
+    pub fn get_total_healing_received(&self, entity: Entity) -> u32 {
+        self.entries
+            .iter()
+            .filter(|e| e.target == Some(entity))
+            .filter(|e| e.entry_type == LogEntryType::Heal)
+            .filter_map(|e| e.healing_done)
+            .sum()
+    }
+
+    /// Get action count by type for a combatant
+    pub fn get_action_count(&self, entity: Entity, entry_type: LogEntryType) -> usize {
+        self.entries
+            .iter()
+            .filter(|e| e.actor == Some(entity) && e.entry_type == entry_type)
+            .count()
+    }
+
+    /// Get all turns that have entries
+    pub fn get_turns_with_entries(&self) -> Vec<u32> {
+        let mut turns: Vec<u32> = self.entries
+            .iter()
+            .map(|e| e.turn)
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+        turns.sort_unstable();
+        turns
+    }
+
+    /// Get entries for a specific turn
+    pub fn entries_for_turn(&self, turn: u32) -> Vec<&LogEntry> {
+        self.entries.iter().filter(|e| e.turn == turn).collect()
+    }
+
+    /// Get entry at specific index
+    pub fn get(&self, index: usize) -> Option<&LogEntry> {
+        self.entries.get(index)
+    }
+
+    /// Get entry index by turn and tick (for replay navigation)
+    pub fn find_entry_index(&self, turn: u32, tick: u64) -> Option<usize> {
+        self.entries
+            .iter()
+            .position(|e| e.turn == turn && e.tick == tick)
+    }
+
+    /// Get the highest turn number in the log
+    pub fn max_turn(&self) -> u32 {
+        self.entries.iter().map(|e| e.turn).max().unwrap_or(0)
+    }
+
+    /// Get statistics summary for all combatants
+    pub fn get_statistics_summary(&self) -> CombatantStatistics {
+        CombatantStatistics::from_log(self)
+    }
+}
+
+/// Statistics for a single combatant
+#[derive(Debug, Clone, Default)]
+pub struct CombatantStats {
+    /// Total damage dealt
+    pub damage_dealt: u32,
+    /// Total damage taken
+    pub damage_taken: u32,
+    /// Total healing done
+    pub healing_done: u32,
+    /// Total healing received
+    pub healing_received: u32,
+    /// Number of attacks made
+    pub attacks_made: usize,
+    /// Number of critical hits
+    pub crits_made: usize,
+    /// Number of heals performed
+    pub heals_performed: usize,
+    /// Number of times missed
+    pub misses: usize,
+    /// Number of status effects applied
+    pub statuses_applied: usize,
+    /// Number of status effects received
+    pub statuses_received: usize,
+}
+
+/// Statistics summary for all combatants
+#[derive(Debug, Clone)]
+pub struct CombatantStatistics {
+    /// Stats per combatant entity
+    pub stats: std::collections::HashMap<Entity, CombatantStats>,
+}
+
+impl CombatantStatistics {
+    /// Calculate statistics from a battle log
+    pub fn from_log(log: &BattleLog) -> Self {
+        let mut stats: std::collections::HashMap<Entity, CombatantStats> = std::collections::HashMap::new();
+
+        for entry in log.entries() {
+            // Process actor stats
+            if let Some(actor) = entry.actor {
+                let actor_stats = stats.entry(actor).or_default();
+                
+                match entry.entry_type {
+                    LogEntryType::Damage => {
+                        actor_stats.attacks_made += 1;
+                        if let Some(dmg) = entry.damage_dealt {
+                            actor_stats.damage_dealt += dmg;
+                        }
+                    }
+                    LogEntryType::Crit => {
+                        actor_stats.attacks_made += 1;
+                        actor_stats.crits_made += 1;
+                        if let Some(dmg) = entry.damage_dealt {
+                            actor_stats.damage_dealt += dmg;
+                        }
+                    }
+                    LogEntryType::Heal => {
+                        actor_stats.heals_performed += 1;
+                        if let Some(heal) = entry.healing_done {
+                            actor_stats.healing_done += heal;
+                        }
+                    }
+                    LogEntryType::Miss => {
+                        actor_stats.attacks_made += 1;
+                        actor_stats.misses += 1;
+                    }
+                    LogEntryType::StatusApplied => {
+                        actor_stats.statuses_applied += 1;
+                    }
+                    _ => {}
+                }
+            }
+
+            // Process target stats
+            if let Some(target) = entry.target {
+                let target_stats = stats.entry(target).or_default();
+                
+                match entry.entry_type {
+                    LogEntryType::Damage | LogEntryType::Crit => {
+                        if let Some(dmg) = entry.damage_dealt {
+                            target_stats.damage_taken += dmg;
+                        }
+                    }
+                    LogEntryType::Heal => {
+                        if let Some(heal) = entry.healing_done {
+                            target_stats.healing_received += heal;
+                        }
+                    }
+                    LogEntryType::StatusApplied => {
+                        target_stats.statuses_received += 1;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Self { stats }
+    }
+
+    /// Get stats for a specific combatant
+    pub fn get(&self, entity: Entity) -> Option<&CombatantStats> {
+        self.stats.get(&entity)
+    }
+
+    /// Get all combatant entities
+    pub fn combatants(&self) -> Vec<Entity> {
+        self.stats.keys().copied().collect()
+    }
+
+    /// Get total damage dealt across all combatants
+    pub fn total_damage_dealt(&self) -> u32 {
+        self.stats.values().map(|s| s.damage_dealt).sum()
+    }
+
+    /// Get total healing done across all combatants
+    pub fn total_healing_done(&self) -> u32 {
+        self.stats.values().map(|s| s.healing_done).sum()
+    }
 }
 
 impl Default for BattleLog {
@@ -479,6 +721,9 @@ impl LogBuilder {
                 message: String::new(),
                 actor: None,
                 target: None,
+                timestamp: std::time::SystemTime::now(),
+                damage_dealt: None,
+                healing_done: None,
             },
         }
     }
@@ -516,6 +761,7 @@ impl LogBuilder {
         };
         self.entry.actor = Some(attacker);
         self.entry.target = Some(defender);
+        self.entry.damage_dealt = Some(amount);
 
         let crit_str = if critical { " Critical hit!" } else { "" };
         self.entry.message = format!(
@@ -541,6 +787,7 @@ impl LogBuilder {
         self.entry.entry_type = LogEntryType::Heal;
         self.entry.actor = healer;
         self.entry.target = Some(target);
+        self.entry.healing_done = Some(amount);
 
         self.entry.message = match healer_name {
             Some(name) => format!("{} heals {} for {} HP!", name, target_name, amount),

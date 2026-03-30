@@ -5,6 +5,9 @@
 
 pub mod director;
 pub mod documentation;
+pub mod cache;
+pub mod providers;
+pub mod bark_templates;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,17 +15,24 @@ use std::collections::HashMap;
 // Re-export director types
 pub use director::{
     ActiveQuest, ContentType, DirectorConfig, DirectorError, DirectorStats, DirectorSystem,
-    GameContext, PacingConfig, ProposalId, QuestHistory, QuestOutcome, QuestPool, QuestProposal,
-    QuestStage, QuestType, TensionCurve, WorldAnalyzer, WorldEvent, WorldStateSnapshot,
+    GameContext, PacingConfig, ProposalId, QuestHistory, QuestOutcome, QuestPool, QuestPoolStats,
+    QuestProposal, QuestStage, QuestType, TensionCurve, WorldAnalyzer, WorldEvent, WorldStateSnapshot,
 };
 
-/// AI task types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+// Re-export new modules
+pub use cache::{CacheManager, CacheStats, CacheEntry, TaskTypeCacheStats};
+pub use providers::{ProviderConfig, ProviderRoutingTable, ModelInfo, ApiKeyStatus};
+pub use bark_templates::{BarkTemplateManager, BarkCategory, BarkTemplate, TemplateVariable, TemplateSource};
+
+/// AI task types for cache and routing
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AiTaskType {
     Dialogue,
     Bark,
     Narrative,
+    CodeGen,
+    ImageGen,
     Balancing,
     Shader,
     /// Quest generation for AI Director
@@ -30,15 +40,45 @@ pub enum AiTaskType {
 }
 
 impl AiTaskType {
+    /// Get all task types
+    pub fn all() -> &'static [AiTaskType] {
+        &[
+            AiTaskType::Dialogue,
+            AiTaskType::Bark,
+            AiTaskType::Narrative,
+            AiTaskType::CodeGen,
+            AiTaskType::ImageGen,
+            AiTaskType::Balancing,
+            AiTaskType::Shader,
+            AiTaskType::QuestGeneration,
+        ]
+    }
+
+    /// Get display name for task type
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            AiTaskType::Dialogue => "Dialogue",
+            AiTaskType::Bark => "Bark",
+            AiTaskType::Narrative => "Narrative",
+            AiTaskType::CodeGen => "Code Generation",
+            AiTaskType::ImageGen => "Image Generation",
+            AiTaskType::Balancing => "Game Balancing",
+            AiTaskType::Shader => "Shader",
+            AiTaskType::QuestGeneration => "Quest Generation",
+        }
+    }
+
     /// Get the preferred model for this task type
     pub fn preferred_model(&self) -> &'static str {
         match self {
             // Claude for code-heavy tasks
-            AiTaskType::Shader | AiTaskType::Balancing => "anthropic",
+            AiTaskType::Shader | AiTaskType::Balancing | AiTaskType::CodeGen => "anthropic",
             // Gemini for narrative and creative tasks
             AiTaskType::Narrative | AiTaskType::Dialogue | AiTaskType::QuestGeneration => "gemini",
             // Local for barks (fast, cheap)
             AiTaskType::Bark => "ollama",
+            // DALL-E or similar for images
+            AiTaskType::ImageGen => "openai",
         }
     }
 
@@ -47,14 +87,23 @@ impl AiTaskType {
         match self {
             // Barks have short TTL (1 hour)
             AiTaskType::Bark => 1,
+            // Images have medium TTL
+            AiTaskType::ImageGen => 6,
+            // Code has long TTL
+            AiTaskType::CodeGen | AiTaskType::Shader => 48,
             // Everything else 24 hours
             _ => 24,
         }
     }
+
+    /// Get default TTL in minutes for UI
+    pub fn default_ttl_minutes(&self) -> u32 {
+        (self.cache_ttl_hours() * 60) as u32
+    }
 }
 
 /// LLM Provider
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LlmProvider {
     OpenAi,
     Anthropic,
@@ -70,6 +119,48 @@ impl LlmProvider {
             LlmProvider::Gemini => "gemini",
             LlmProvider::Ollama => "ollama",
         }
+    }
+
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            LlmProvider::OpenAi => "OpenAI",
+            LlmProvider::Anthropic => "Anthropic (Claude)",
+            LlmProvider::Gemini => "Google Gemini",
+            LlmProvider::Ollama => "Ollama (Local)",
+        }
+    }
+
+    /// Get available models for this provider
+    pub fn available_models(&self) -> Vec<ModelInfo> {
+        match self {
+            LlmProvider::OpenAi => vec![
+                ModelInfo::new("gpt-4o", "GPT-4o", 128_000),
+                ModelInfo::new("gpt-4o-mini", "GPT-4o Mini", 128_000),
+                ModelInfo::new("gpt-4-turbo", "GPT-4 Turbo", 128_000),
+                ModelInfo::new("dall-e-3", "DALL-E 3", 0),
+            ],
+            LlmProvider::Anthropic => vec![
+                ModelInfo::new("claude-3-5-sonnet-20241022", "Claude 3.5 Sonnet", 200_000),
+                ModelInfo::new("claude-3-opus-20240229", "Claude 3 Opus", 200_000),
+                ModelInfo::new("claude-3-haiku-20240307", "Claude 3 Haiku", 200_000),
+            ],
+            LlmProvider::Gemini => vec![
+                ModelInfo::new("gemini-2.0-flash", "Gemini 2.0 Flash", 1_000_000),
+                ModelInfo::new("gemini-1.5-pro", "Gemini 1.5 Pro", 2_000_000),
+                ModelInfo::new("gemini-1.5-flash", "Gemini 1.5 Flash", 1_000_000),
+            ],
+            LlmProvider::Ollama => vec![
+                ModelInfo::new("llama3.2", "Llama 3.2", 8_000),
+                ModelInfo::new("llama3.1", "Llama 3.1", 128_000),
+                ModelInfo::new("mistral", "Mistral", 32_000),
+                ModelInfo::new("codellama", "CodeLlama", 16_000),
+            ],
+        }
+    }
+
+    /// Check if this provider is typically local
+    pub fn is_local(&self) -> bool {
+        matches!(self, LlmProvider::Ollama)
     }
 }
 
@@ -197,6 +288,9 @@ pub enum SidecarError {
 
     #[error("Timeout")]
     Timeout,
+
+    #[error("Cache error: {0}")]
+    Cache(String),
 }
 
 /// AI Sidecar Client
@@ -204,6 +298,9 @@ pub struct AiSidecarClient {
     http_client: reqwest::Client,
     base_url: String,
     available: bool,
+    cache_manager: CacheManager,
+    provider_table: ProviderRoutingTable,
+    bark_templates: BarkTemplateManager,
 }
 
 impl AiSidecarClient {
@@ -218,6 +315,9 @@ impl AiSidecarClient {
             http_client,
             base_url: base_url.into(),
             available: false,
+            cache_manager: CacheManager::new(),
+            provider_table: ProviderRoutingTable::default(),
+            bark_templates: BarkTemplateManager::new(),
         }
     }
 
@@ -251,11 +351,53 @@ impl AiSidecarClient {
         self.available
     }
 
+    /// Get mutable reference to cache manager
+    pub fn cache_manager_mut(&mut self) -> &mut CacheManager {
+        &mut self.cache_manager
+    }
+
+    /// Get reference to cache manager
+    pub fn cache_manager(&self) -> &CacheManager {
+        &self.cache_manager
+    }
+
+    /// Get mutable reference to provider table
+    pub fn provider_table_mut(&mut self) -> &mut ProviderRoutingTable {
+        &mut self.provider_table
+    }
+
+    /// Get reference to provider table
+    pub fn provider_table(&self) -> &ProviderRoutingTable {
+        &self.provider_table
+    }
+
+    /// Get mutable reference to bark templates
+    pub fn bark_templates_mut(&mut self) -> &mut BarkTemplateManager {
+        &mut self.bark_templates
+    }
+
+    /// Get reference to bark templates
+    pub fn bark_templates(&self) -> &BarkTemplateManager {
+        &self.bark_templates
+    }
+
     /// Generate content
     pub async fn generate(
         &self,
         request: GenerationRequest,
     ) -> Result<GenerationResponse, SidecarError> {
+        // Check cache first
+        if let Some(cached) = self.cache_manager.get_cached(&request.request_id) {
+            return Ok(GenerationResponse {
+                request_id: request.request_id,
+                content: cached.content,
+                tokens_used: cached.tokens_used,
+                model: cached.model,
+                cached: true,
+                generation_time_ms: 0,
+            });
+        }
+
         if !self.available {
             return Err(SidecarError::Unavailable("Sidecar not available".into()));
         }
@@ -280,13 +422,33 @@ impl AiSidecarClient {
             .await
             .map_err(SidecarError::Http)?;
 
+        // Cache the result
+        self.cache_manager.store(
+            &request.request_id,
+            cache::CachedResult {
+                content: result.content.clone(),
+                tokens_used: result.tokens_used,
+                model: result.model.clone(),
+            },
+            request.task_type,
+        );
+
         Ok(result)
     }
 
     /// Generate a bark (short NPC line)
     pub async fn generate_bark(&self, request: BarkRequest) -> Result<BarkResponse, SidecarError> {
+        // Try to use templates first if available
+        if let Some(template) = self.bark_templates.get_random_template(&request.context, &request.mood) {
+            let text = self.bark_templates.render_template(template, &request);
+            return Ok(BarkResponse {
+                text,
+                confidence: 0.8,
+            });
+        }
+
         if !self.available {
-            // Fallback to templates
+            // Fallback to basic templates
             return Ok(BarkResponse {
                 text: get_template_bark(&request.context, &request.mood),
                 confidence: 0.5,
@@ -356,49 +518,21 @@ impl AiSidecarClient {
 
     /// Get cache statistics
     pub async fn get_cache_stats(&self) -> Result<CacheStats, SidecarError> {
-        if !self.available {
-            return Err(SidecarError::Unavailable("Sidecar not available".into()));
-        }
-
-        let response = self
-            .http_client
-            .get(format!("{}/cache/stats", self.base_url))
-            .send()
-            .await
-            .map_err(SidecarError::Http)?;
-
-        let stats = response
-            .json::<CacheStats>()
-            .await
-            .map_err(SidecarError::Http)?;
-
-        Ok(stats)
+        // Return local cache stats
+        Ok(self.cache_manager.get_stats())
     }
 
     /// Clear the cache
     pub async fn clear_cache(&self) -> Result<(), SidecarError> {
-        if !self.available {
-            return Err(SidecarError::Unavailable("Sidecar not available".into()));
-        }
-
-        self.http_client
-            .delete(format!("{}/cache/clear", self.base_url))
-            .send()
-            .await
-            .map_err(SidecarError::Http)?;
-
+        self.cache_manager.clear_all();
         Ok(())
     }
-}
 
-/// Cache statistics
-#[derive(Debug, Clone, Deserialize)]
-pub struct CacheStats {
-    pub total_entries: u64,
-    pub valid_entries: u64,
-    pub expired_entries: u64,
-    pub total_tokens: u64,
-    pub by_model: HashMap<String, u64>,
+    /// Clear cache for specific task type
+    pub async fn clear_cache_for_task(&self, task_type: AiTaskType) -> Result<(), SidecarError> {
+        self.cache_manager.clear_by_task_type(task_type);
+        Ok(())
+    }
 }
 
 /// Template-based bark fallback
@@ -454,6 +588,33 @@ fn get_template_bark(context: &str, mood: &str) -> String {
                 "This place has a dark history.",
             ],
         );
+        map.insert(
+            "combat",
+            vec![
+                "En garde!",
+                "You'll not take me alive!",
+                "For honor!",
+                "Have at thee!",
+            ],
+        );
+        map.insert(
+            "low_health",
+            vec![
+                "I... I need a healer...",
+                "Can't... hold on much longer...",
+                "Curse these wounds...",
+                "Medic!",
+            ],
+        );
+        map.insert(
+            "victory",
+            vec![
+                "Victory is ours!",
+                "Another foe vanquished!",
+                "We are triumphant!",
+                "Glory to the victors!",
+            ],
+        );
         map
     });
 
@@ -481,6 +642,21 @@ fn get_template_bark(context: &str, mood: &str) -> String {
         || context.to_lowercase().contains("ancient")
     {
         "lore"
+    } else if context.to_lowercase().contains("combat")
+        || context.to_lowercase().contains("attack")
+        || mood.to_lowercase().contains("aggressive")
+    {
+        "combat"
+    } else if context.to_lowercase().contains("hurt")
+        || context.to_lowercase().contains("wound")
+        || mood.to_lowercase().contains("pain")
+    {
+        "low_health"
+    } else if context.to_lowercase().contains("victory")
+        || context.to_lowercase().contains("win")
+        || mood.to_lowercase().contains("triumphant")
+    {
+        "victory"
     } else {
         "greeting"
     };
@@ -514,5 +690,25 @@ mod tests {
         assert_eq!(AiTaskType::Bark.preferred_model(), "ollama");
         assert_eq!(AiTaskType::Dialogue.preferred_model(), "gemini");
         assert_eq!(AiTaskType::Shader.preferred_model(), "anthropic");
+    }
+
+    #[test]
+    fn test_provider_models() {
+        let models = LlmProvider::Anthropic.available_models();
+        assert!(!models.is_empty());
+        assert!(models.iter().any(|m| m.id == "claude-3-5-sonnet-20241022"));
+    }
+
+    #[test]
+    fn test_cache_manager() {
+        let mut manager = CacheManager::new();
+        let stats = manager.get_stats();
+        assert_eq!(stats.total_items, 0);
+    }
+
+    #[test]
+    fn test_bark_templates() {
+        let manager = BarkTemplateManager::new();
+        assert!(!manager.categories().is_empty());
     }
 }

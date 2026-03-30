@@ -27,6 +27,15 @@ img_hash = "3"
 sha2 = "0.10"
 hex = "0.4"
 
+# Pattern matching for classification rules
+regex = "1"
+
+# File system watching for auto-classification
+notify = { version = "6", default-features = false, features = ["macos_fsevent"] }
+
+# UUID generation
+uuid = { version = "1", features = ["v4"] }
+
 # Error handling
 thiserror = "1"
 

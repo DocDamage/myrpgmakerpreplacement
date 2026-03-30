@@ -300,10 +300,21 @@ impl ComponentInspector {
         // Add component button (editor mode only)
         if self.edit_mode {
             ui.separator();
-            if ui.button("➕ Add Component").clicked() {
-                // Would open component picker dialog
-                ui.label("Component picker would open here");
-            }
+            ui.menu_button("➕ Add Component", |ui| {
+                ui.label("Select component to add:");
+                ui.separator();
+                for component_name in Self::available_components() {
+                    // Only show components the entity doesn't already have
+                    if !self.has_component(component_name) {
+                        if ui.button(component_name).clicked() {
+                            if let Err(e) = self.add_component(entity, component_name, world) {
+                                tracing::warn!("Failed to add component: {}", e);
+                            }
+                            ui.close_menu();
+                        }
+                    }
+                }
+            });
         }
     }
 
@@ -326,8 +337,9 @@ impl ComponentInspector {
                 ui.horizontal(|ui| {
                     ui.add_space(ui.available_width() - 60.0);
                     if ui.button("🗑 Remove").clicked() {
-                        // Would remove component
-                        tracing::info!("Remove {} from {:?}", component_name, entity);
+                        if let Err(e) = self.remove_component(entity, component_name, world) {
+                            tracing::warn!("Failed to remove component: {}", e);
+                        }
                     }
                 });
             }
@@ -491,13 +503,103 @@ impl ComponentInspector {
         component_name: &str,
         world: &mut World,
     ) -> Result<(), InspectorError> {
-        // This would use reflection or type registration to add components
-        // For now, it's a placeholder
-        tracing::info!("Adding {} to {:?}", component_name, entity);
-
+        use dde_core::components::*;
+        
+        // Insert the appropriate component based on name
+        match component_name {
+            "Position" => {
+                world.insert_one(entity, Position::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "SubPosition" => {
+                world.insert_one(entity, SubPosition::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "Name" => {
+                world.insert_one(entity, Name::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "Stats" => {
+                world.insert_one(entity, Stats::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "Inventory" => {
+                world.insert_one(entity, Inventory::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "Equipment" => {
+                world.insert_one(entity, Equipment::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "EntityKind" => {
+                world.insert_one(entity, EntityKindComp::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "Biome" => {
+                world.insert_one(entity, Biome::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "Passability" => {
+                world.insert_one(entity, Passability::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "Interactable" => {
+                world.insert_one(entity, Interactable::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "StatusEffects" => {
+                world.insert_one(entity, StatusEffects::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "Respawn" => {
+                world.insert_one(entity, Respawn::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "CameraTarget" => {
+                world.insert_one(entity, CameraTarget::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "MapId" => {
+                world.insert_one(entity, MapId::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "FactionId" => {
+                world.insert_one(entity, FactionId::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "WorldStateComp" => {
+                world.insert_one(entity, WorldStateComp::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            "TilesetRef" => {
+                world.insert_one(entity, TilesetRef::default()).map_err(|_| {
+                    InspectorError::EntityNotFound(entity)
+                })?;
+            }
+            _ => return Err(InspectorError::InvalidComponentType(component_name.to_string())),
+        }
+        
+        tracing::info!("Added {} to {:?}", component_name, entity);
+        
         // Refresh values after modification
         self.refresh_values(world);
-
+        
         Ok(())
     }
 
@@ -508,15 +610,106 @@ impl ComponentInspector {
         component_name: &str,
         world: &mut World,
     ) -> Result<(), InspectorError> {
-        // This would use reflection or type registration to remove components
-        tracing::info!("Removing {} from {:?}", component_name, entity);
-
+        use dde_core::components::*;
+        
+        // Remove the appropriate component based on name
+        match component_name {
+            "Position" => {
+                world.remove_one::<Position>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "SubPosition" => {
+                world.remove_one::<SubPosition>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "Name" => {
+                world.remove_one::<Name>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "Stats" => {
+                world.remove_one::<Stats>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "Inventory" => {
+                world.remove_one::<Inventory>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "Equipment" => {
+                world.remove_one::<Equipment>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "EntityKind" => {
+                world.remove_one::<EntityKindComp>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "Biome" => {
+                world.remove_one::<Biome>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "Passability" => {
+                world.remove_one::<Passability>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "Interactable" => {
+                world.remove_one::<Interactable>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "StatusEffects" => {
+                world.remove_one::<StatusEffects>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "Respawn" => {
+                world.remove_one::<Respawn>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "CameraTarget" => {
+                world.remove_one::<CameraTarget>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "MapId" => {
+                world.remove_one::<MapId>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "FactionId" => {
+                world.remove_one::<FactionId>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "WorldStateComp" => {
+                world.remove_one::<WorldStateComp>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            "TilesetRef" => {
+                world.remove_one::<TilesetRef>(entity).map_err(|_| {
+                    InspectorError::ComponentNotFound(component_name.to_string())
+                })?;
+            }
+            _ => return Err(InspectorError::InvalidComponentType(component_name.to_string())),
+        }
+        
+        tracing::info!("Removed {} from {:?}", component_name, entity);
+        
         // Remove from editing values
         self.editing_values.remove(component_name);
-
+        
         // Refresh values after modification
         self.refresh_values(world);
-
+        
         Ok(())
     }
 

@@ -17,7 +17,7 @@ pub mod embedded_server;
 pub mod webview;
 
 pub use adapter::{ForgeAction, ForgeState, SpriteGeneratorAdapter};
-pub use asset_os::{AssetOs, AssetPipelineStage, AssetReview};
+pub use asset_os::{AssetOs, AssetPipelineStage, AssetRecord, AssetReview};
 pub use classification::{AssetClassifier, ClassificationResult, ClassificationRule};
 pub use dependency_graph::{
     AssetId, AssetNode, AssetType, Dependency, DependencyAnalysis, DependencyError,
@@ -99,6 +99,9 @@ pub enum AssetForgeError {
 
     #[error("IPC error: {0}")]
     Ipc(String),
+
+    #[error("File watcher error: {0}")]
+    Notify(#[from] notify::Error),
 
     #[error("Asset not found: {0}")]
     AssetNotFound(String),

@@ -215,6 +215,59 @@ pub struct Map {
     pub camera_bounds_json: Option<String>,
 }
 
+/// Classification rule model for database storage
+#[derive(Debug, Clone)]
+pub struct ClassificationRuleModel {
+    pub id: String,
+    pub name: String,
+    pub file_pattern: String,
+    pub asset_type: String,
+    pub auto_tags_json: String,
+    pub priority: i32,
+    pub enabled: bool,
+    pub exact_dimensions: Option<(u32, u32)>,
+    pub min_width: Option<u32>,
+    pub max_width: Option<u32>,
+    pub min_height: Option<u32>,
+    pub max_height: Option<u32>,
+    pub confidence: f64,
+}
+
+impl ClassificationRuleModel {
+    /// Parse auto_tags from JSON
+    pub fn auto_tags(&self) -> Vec<String> {
+        serde_json::from_str(&self.auto_tags_json).unwrap_or_default()
+    }
+
+    /// Set auto_tags as JSON
+    pub fn set_auto_tags(&mut self, tags: &[String]) {
+        self.auto_tags_json = serde_json::to_string(tags).unwrap_or_else(|_| "[]".to_string());
+    }
+}
+
+/// Classification statistics model
+#[derive(Debug, Clone)]
+pub struct ClassificationStatsModel {
+    pub rule_id: String,
+    pub times_matched: i64,
+    pub times_applied: i64,
+    pub times_overridden: i64,
+    pub avg_confidence: Option<f64>,
+    pub last_matched_at: Option<i64>,
+}
+
+/// Classification queue item
+#[derive(Debug, Clone)]
+pub struct ClassificationQueueItem {
+    pub queue_id: i64,
+    pub file_path: String,
+    pub file_name: String,
+    pub file_size: Option<i64>,
+    pub dimensions: Option<(u32, u32)>,
+    pub queued_at: i64,
+    pub retry_count: i32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

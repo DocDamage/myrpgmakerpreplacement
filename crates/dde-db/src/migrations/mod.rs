@@ -10,9 +10,12 @@ pub mod v2_asset_os;
 pub mod v3_screenshots;
 pub mod v4_cutscenes;
 pub mod v4_visual_scripts;
+pub mod v6_status_effects;
+pub mod v7_classification_rules;
+pub mod v8_formations;
 
 /// Current schema version
-pub const CURRENT_SCHEMA_VERSION: i32 = 5;
+pub const CURRENT_SCHEMA_VERSION: i32 = 8;
 
 /// Run all pending migrations
 pub fn run_migrations(conn: &Connection) -> Result<()> {
@@ -56,6 +59,21 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     if current_version < 5 {
         v4_visual_scripts::apply(conn)?;
         record_migration(conn, 5)?;
+    }
+
+    if current_version < 6 {
+        v6_status_effects::apply(conn)?;
+        record_migration(conn, 6)?;
+    }
+
+    if current_version < 7 {
+        v7_classification_rules::apply(conn)?;
+        record_migration(conn, 7)?;
+    }
+
+    if current_version < 8 {
+        v8_formations::apply(conn)?;
+        record_migration(conn, 8)?;
     }
 
     tracing::info!("Database schema at version {}", CURRENT_SCHEMA_VERSION);

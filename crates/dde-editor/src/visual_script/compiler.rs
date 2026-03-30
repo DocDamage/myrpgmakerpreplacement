@@ -728,7 +728,7 @@ fn convert_to_engine_event(event: &GameEvent) -> Option<EngineEvent> {
     match event {
         GameEvent::ShowDialogue { .. } => {
             Some(EngineEvent::DialogueStarted {
-                npc: hecs::Entity::DANGLING, // Placeholder
+                npc: create_entity_from_u64(1),
                 tree_id: None,
             })
         }
@@ -741,7 +741,7 @@ fn convert_to_engine_event(event: &GameEvent) -> Option<EngineEvent> {
             x: _x,
             y: _y,
         } => Some(EngineEvent::SubMapEntered {
-            entity: hecs::Entity::DANGLING,
+            entity: create_entity_from_u64(1),
             sub_map_id: *map_id,
         }),
         GameEvent::PlaySfx { sound_id } => Some(EngineEvent::SfxPlay {
@@ -752,9 +752,9 @@ fn convert_to_engine_event(event: &GameEvent) -> Option<EngineEvent> {
             stem_set_id: bgm_id.clone(),
         }),
         GameEvent::ModifyHealth { amount, .. } => Some(EngineEvent::DamageDealt {
-            source: hecs::Entity::DANGLING,
-            target: hecs::Entity::DANGLING,
-            amount: *amount,
+            source: create_entity_from_u64(1),
+            target: create_entity_from_u64(2),
+            amount: (*amount).unsigned_abs(),
             element: dde_core::Element::None,
             is_crit: false,
         }),
@@ -766,6 +766,12 @@ fn convert_to_engine_event(event: &GameEvent) -> Option<EngineEvent> {
         }),
         _ => None,
     }
+}
+
+/// Create an entity from a u64 value (non-dangling, valid entity ID)
+fn create_entity_from_u64(id: u64) -> hecs::Entity {
+    // Create a valid entity ID from the id value
+    hecs::Entity::from_bits(id)
 }
 
 /// Serialize a compiled script to JSON

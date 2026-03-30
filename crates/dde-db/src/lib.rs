@@ -14,6 +14,9 @@ pub mod screenshot;
 pub mod sync;
 
 pub use models::*;
+pub use queries::{
+    DialogueQueries, EntityQueries, StatusEffectQueries, StatusEffectTemplateModel, TileQueries
+};
 pub use screenshot::*;
 
 /// Database error types
@@ -450,6 +453,276 @@ impl Database {
     /// Get the project path
     pub fn path(&self) -> &str {
         &self.project_path
+    }
+
+    /// Clone the database connection
+    /// 
+    /// Creates a new connection to the same database file.
+    /// This is useful when multiple components need independent connections.
+    pub fn clone_connection(&self) -> Result<Self> {
+        Self::open(&self.project_path)
+    }
+
+    // =====================================================
+    // Status Effect Template Methods
+    // =====================================================
+
+    /// Get all status effect templates
+    pub fn get_status_effect_templates(&self) -> Result<Vec<StatusEffectTemplateModel>> {
+        StatusEffectQueries::get_all_templates(self)
+    }
+
+    /// Get a single status effect template by ID
+    pub fn get_status_effect_template(&self, template_id: &str) -> Result<Option<StatusEffectTemplateModel>> {
+        StatusEffectQueries::get_template(self, template_id)
+    }
+
+    /// Save a status effect template
+    pub fn save_status_effect_template(&mut self, template: &StatusEffectTemplateModel) -> Result<()> {
+        StatusEffectQueries::save_template(self, template)
+    }
+
+    /// Delete a status effect template
+    pub fn delete_status_effect_template(&mut self, template_id: &str) -> Result<bool> {
+        StatusEffectQueries::delete_template(self, template_id)
+    }
+
+    /// Get templates by status type
+    pub fn get_status_effect_templates_by_type(&self, status_type: &str) -> Result<Vec<StatusEffectTemplateModel>> {
+        StatusEffectQueries::get_templates_by_type(self, status_type)
+    }
+
+    // =====================================================
+    // Classification Rules Methods
+    // =====================================================
+
+    /// Get all classification rules ordered by priority
+    pub fn get_classification_rules(&self) -> Result<Vec<ClassificationRuleModel>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, file_pattern, asset_type, auto_tags_json, priority, 
+                    enabled, exact_width, exact_height, min_width, max_width, 
+                    min_height, max_height, confidence
+             FROM classification_rules 
+             ORDER BY priority DESC"
+        )?;
+
+        let rules = stmt.query_map([], |row| {
+            let exact_w: Option<i64> = row.get(7)?;
+            let exact_h: Option<i64> = row.get(8)?;
+            let exact_dimensions = match (exact_w, exact_h) {
+                (Some(w), Some(h)) => Some((w as u32, h as u32)),
+                _ => None,
+            };
+
+            Ok(ClassificationRuleModel {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                file_pattern: row.get(2)?,
+                asset_type: row.get(3)?,
+                auto_tags_json: row.get(4)?,
+                priority: row.get(5)?,
+                enabled: row.get(6)?,
+                exact_dimensions,
+                min_width: row.get::<_, Option<i64>>(9)?.map(|v| v as u32),
+                max_width: row.get::<_, Option<i64>>(10)?.map(|v| v as u32),
+                min_height: row.get::<_, Option<i64>>(11)?.map(|v| v as u32),
+                max_height: row.get::<_, Option<i64>>(12)?.map(|v| v as u32),
+                confidence: row.get(13)?,
+            })
+        })?;
+
+        rules.collect::<std::result::Result<Vec<_>, rusqlite::Error>>()
+            .map_err(DbError::from)
+    }
+
+    /// Get a single classification rule by ID
+    pub fn get_classification_rule(&self, rule_id: &str) -> Result<Option<ClassificationRuleModel>> {
+        let result = self.conn.query_row(
+            "SELECT id, name, file_pattern, asset_type, auto_tags_json, priority, 
+                    enabled, exact_width, exact_height, min_width, max_width, 
+                    min_height, max_height, confidence
+             FROM classification_rules 
+             WHERE id = ?1",
+            [rule_id],
+            |row| {
+                let exact_w: Option<i64> = row.get(7)?;
+                let exact_h: Option<i64> = row.get(8)?;
+                let exact_dimensions = match (exact_w, exact_h) {
+                    (Some(w), Some(h)) => Some((w as u32, h as u32)),
+                    _ => None,
+                };
+
+                Ok(ClassificationRuleModel {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    file_pattern: row.get(2)?,
+                    asset_type: row.get(3)?,
+                    auto_tags_json: row.get(4)?,
+                    priority: row.get(5)?,
+                    enabled: row.get(6)?,
+                    exact_dimensions,
+                    min_width: row.get::<_, Option<i64>>(9)?.map(|v| v as u32),
+                    max_width: row.get::<_, Option<i64>>(10)?.map(|v| v as u32),
+                    min_height: row.get::<_, Option<i64>>(11)?.map(|v| v as u32),
+                    max_height: row.get::<_, Option<i64>>(12)?.map(|v| v as u32),
+                    confidence: row.get(13)?,
+                })
+            },
+        );
+
+        match result {
+            Ok(rule) => Ok(Some(rule)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Save a classification rule (insert or update)
+    pub fn save_classification_rule(&mut self, rule: &ClassificationRuleModel) -> Result<()> {
+        let now = chrono::Utc::now().timestamp_millis();
+        
+        self.conn.execute(
+            "INSERT INTO classification_rules 
+             (id, name, file_pattern, asset_type, auto_tags_json, priority, 
+              enabled, exact_width, exact_height, min_width, max_width, 
+              min_height, max_height, confidence, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+             ON CONFLICT(id) DO UPDATE SET
+             name = excluded.name,
+             file_pattern = excluded.file_pattern,
+             asset_type = excluded.asset_type,
+             auto_tags_json = excluded.auto_tags_json,
+             priority = excluded.priority,
+             enabled = excluded.enabled,
+             exact_width = excluded.exact_width,
+             exact_height = excluded.exact_height,
+             min_width = excluded.min_width,
+             max_width = excluded.max_width,
+             min_height = excluded.min_height,
+             max_height = excluded.max_height,
+             confidence = excluded.confidence,
+             updated_at = excluded.updated_at",
+            (
+                &rule.id,
+                &rule.name,
+                &rule.file_pattern,
+                &rule.asset_type,
+                &rule.auto_tags_json,
+                rule.priority,
+                rule.enabled,
+                rule.exact_dimensions.map(|(w, _)| w as i64),
+                rule.exact_dimensions.map(|(_, h)| h as i64),
+                rule.min_width.map(|v| v as i64),
+                rule.max_width.map(|v| v as i64),
+                rule.min_height.map(|v| v as i64),
+                rule.max_height.map(|v| v as i64),
+                rule.confidence,
+                now,
+            ),
+        )?;
+        
+        Ok(())
+    }
+
+    /// Delete a classification rule
+    pub fn delete_classification_rule(&mut self, rule_id: &str) -> Result<bool> {
+        let rows = self.conn.execute(
+            "DELETE FROM classification_rules WHERE id = ?1",
+            [rule_id],
+        )?;
+        Ok(rows > 0)
+    }
+
+    /// Get classification statistics for all rules
+    pub fn get_classification_stats(&self) -> Result<Vec<ClassificationStatsModel>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT rule_id, times_matched, times_applied, times_overridden, 
+                    avg_confidence, last_matched_at
+             FROM classification_stats"
+        )?;
+
+        let stats = stmt.query_map([], |row| {
+            Ok(ClassificationStatsModel {
+                rule_id: row.get(0)?,
+                times_matched: row.get(1)?,
+                times_applied: row.get(2)?,
+                times_overridden: row.get(3)?,
+                avg_confidence: row.get(4)?,
+                last_matched_at: row.get(5)?,
+            })
+        })?;
+
+        stats.collect::<std::result::Result<Vec<_>, rusqlite::Error>>()
+            .map_err(DbError::from)
+    }
+
+    /// Add a file to the classification queue
+    pub fn queue_file_for_classification(&mut self, file_path: &str, file_name: &str, file_size: Option<i64>, dimensions: Option<(u32, u32)>) -> Result<()> {
+        let now = chrono::Utc::now().timestamp_millis();
+        let dims_str = dimensions.map(|(w, h)| format!("{}x{}", w, h));
+        
+        self.conn.execute(
+            "INSERT INTO classification_queue (file_path, file_name, file_size, detected_dimensions, queued_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, 'pending')
+             ON CONFLICT(file_path) DO UPDATE SET
+             queued_at = excluded.queued_at,
+             status = 'pending',
+             retry_count = 0",
+            (file_path, file_name, file_size, dims_str, now),
+        )?;
+        
+        Ok(())
+    }
+
+    /// Get pending files from classification queue
+    pub fn get_pending_classification_queue(&self, limit: i64) -> Result<Vec<ClassificationQueueItem>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT queue_id, file_path, file_name, file_size, detected_dimensions, 
+                    queued_at, retry_count
+             FROM classification_queue 
+             WHERE status = 'pending'
+             ORDER BY queued_at
+             LIMIT ?1"
+        )?;
+
+        let items = stmt.query_map([limit], |row| {
+            let dims_str: Option<String> = row.get(4)?;
+            let dimensions = dims_str.and_then(|s| {
+                let parts: Vec<&str> = s.split('x').collect();
+                if parts.len() == 2 {
+                    Some((parts[0].parse().unwrap_or(0), parts[1].parse().unwrap_or(0)))
+                } else {
+                    None
+                }
+            });
+
+            Ok(ClassificationQueueItem {
+                queue_id: row.get(0)?,
+                file_path: row.get(1)?,
+                file_name: row.get(2)?,
+                file_size: row.get(3)?,
+                dimensions,
+                queued_at: row.get(5)?,
+                retry_count: row.get(6)?,
+            })
+        })?;
+
+        items.collect::<std::result::Result<Vec<_>, rusqlite::Error>>()
+            .map_err(DbError::from)
+    }
+
+    /// Update classification queue item status
+    pub fn update_classification_queue_status(&mut self, queue_id: i64, status: &str, error_message: Option<&str>) -> Result<()> {
+        let now = chrono::Utc::now().timestamp_millis();
+        
+        self.conn.execute(
+            "UPDATE classification_queue 
+             SET status = ?1, processed_at = ?2, error_message = ?3
+             WHERE queue_id = ?4",
+            (status, now, error_message, queue_id),
+        )?;
+        
+        Ok(())
     }
 }
 

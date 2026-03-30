@@ -4,6 +4,13 @@
 //! Toggled with F11 in editor mode.
 
 pub mod advanced;
+pub mod enhanced;
+
+pub use enhanced::{
+    EnhancedProfiler, EnhancedFrameMetrics, SectionMetrics, MemoryBreakdown,
+    EntityCounts, BudgetConfiguration, Bottleneck,
+    OptimizationSuggestion, SuggestionCategory, ExportRange, TimeSeriesMetric,
+};
 
 use std::collections::VecDeque;
 use std::time::Instant;
@@ -348,9 +355,10 @@ impl Default for Profiler {
 }
 
 /// Budget compliance status
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum BudgetStatus {
     /// Within budget (< 80%)
+    #[default]
     Good,
     /// Near budget (80-100%)
     Warning,
@@ -359,6 +367,7 @@ pub enum BudgetStatus {
     /// Unknown/no data
     Unknown,
 }
+
 
 impl BudgetStatus {
     /// Get color for display (RGB)

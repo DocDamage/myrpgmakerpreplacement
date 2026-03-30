@@ -12,7 +12,12 @@ pub mod player;
 pub mod simulation;
 
 pub use bark::{BarkCategory, BarkDisplay, BarkRequest, BarkSystem, NpcBark};
-pub use dialogue::{DialogueManager, DialogueSession, DialogueTree, TypewriterText};
+pub use dialogue::{
+    ActionType, BranchMode, ConditionOp, DialogueChoice, DialogueCondition, DialogueEffect,
+    DialogueEntry, DialogueManager, DialogueMetadata, DialogueNode, DialogueNodeType,
+    DialogueSession, DialogueTree, NodeConnection, NodePosition, PortraitPosition, TypewriterText,
+    ValidationError,
+};
 pub use input::{InputBindings, InputContext, InputSystem};
 pub use movement::{MovementSystem, TileCollisionMap};
 pub use player::{Player, PlayerController};

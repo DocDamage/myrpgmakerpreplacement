@@ -142,19 +142,55 @@ impl BehaviorTreeEditor {
 
             ui.add_enabled_ui(self.root.is_some(), |ui| {
                 if ui.button("💾 Save").clicked() {
-                    // TODO: Implement save
-                    self.modified = false;
+                    // Save behavior tree to JSON
+                    if let Some(json) = self.save_to_json() {
+                        // In a real implementation, this would open a file dialog
+                        // For now, we output to a default location or log it
+                        let save_path = std::path::PathBuf::from("behavior_tree.json");
+                        match std::fs::write(&save_path, &json) {
+                            Ok(_) => {
+                                self.modified = false;
+                                tracing::info!("Saved behavior tree to {:?}", save_path);
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to save behavior tree: {}", e);
+                            }
+                        }
+                    }
                 }
             });
 
             if ui.button("📂 Open").clicked() {
-                // TODO: Implement open
+                // Load behavior tree from JSON file
+                let open_path = std::path::PathBuf::from("behavior_tree.json");
+                match std::fs::read_to_string(&open_path) {
+                    Ok(json) => {
+                        if let Err(e) = self.load_from_json(&json) {
+                            tracing::error!("Failed to load behavior tree: {}", e);
+                        } else {
+                            tracing::info!("Loaded behavior tree from {:?}", open_path);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("No behavior tree file found: {}", e);
+                    }
+                }
             }
 
             ui.separator();
 
             if ui.button("▶ Export").clicked() {
-                // TODO: Implement export
+                // Export behavior tree to Rust code
+                let export_code = self.export_to_rust_code();
+                let export_path = std::path::PathBuf::from("behavior_tree_export.rs");
+                match std::fs::write(&export_path, export_code) {
+                    Ok(_) => {
+                        tracing::info!("Exported behavior tree to {:?}", export_path);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to export behavior tree: {}", e);
+                    }
+                }
             }
 
             ui.separator();
@@ -166,6 +202,24 @@ impl BehaviorTreeEditor {
                 ui.label(format!("Zoom: {:.0}%", self.canvas_zoom * 100.0));
             });
         });
+    }
+
+    /// Export behavior tree to Rust code representation
+    fn export_to_rust_code(&self) -> String {
+        if let Some(root) = &self.root {
+            format!(
+                "// Auto-generated Behavior Tree\n\
+                 use dde_core::ai::*;\n\n\
+                 pub fn build_behavior_tree() -> BehaviorTree {{\n\
+                 \t// Root node: {:?}\n\
+                 \tlet root = {:?};\n\
+                 \tBehaviorTree::new(root)\n\
+                 }}\n",
+                root.node_type, root
+            )
+        } else {
+            "// No behavior tree to export\n".to_string()
+        }
     }
 
     /// Draw the node palette sidebar

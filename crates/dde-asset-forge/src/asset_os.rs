@@ -408,4 +408,38 @@ impl AssetOs {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| crate::AssetForgeError::Database(e.into()))
     }
+
+    /// Add a tag to an asset
+    pub fn add_tag(&mut self, asset_id: i64, tag: &str) -> crate::Result<()> {
+        let conn = self.db.conn();
+        conn.execute(
+            "INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?1, ?2)",
+            (asset_id, tag),
+        )?;
+        Ok(())
+    }
+
+    /// Remove a tag from an asset
+    pub fn remove_tag(&mut self, asset_id: i64, tag: &str) -> crate::Result<()> {
+        let conn = self.db.conn();
+        conn.execute(
+            "DELETE FROM asset_tags WHERE asset_id = ?1 AND tag = ?2",
+            (asset_id, tag),
+        )?;
+        Ok(())
+    }
+
+    /// Get all tags for an asset
+    pub fn get_asset_tags(&self, asset_id: i64) -> crate::Result<Vec<String>> {
+        let conn = self.db.conn();
+        let mut stmt = conn.prepare("SELECT tag FROM asset_tags WHERE asset_id = ?1")?;
+
+        let tags = stmt.query_map([asset_id], |row| {
+            let tag: String = row.get(0)?;
+            Ok(tag)
+        })?;
+
+        tags.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| crate::AssetForgeError::Database(e.into()))
+    }
 }

@@ -1117,7 +1117,7 @@ pub fn process_status_effects(world: &mut World, _dt: f32) -> Vec<StatusEvent> {
         // Get max hp
         let max_hp = world.query_one::<&Stats>(entity)
             .ok()
-            .and_then(|q| q.get().map(|s| s.max_hp))
+            .and_then(|mut q| q.get().map(|s| s.max_hp))
             .unwrap_or(100);
         
         // Process DoT/HoT ticks
@@ -1206,7 +1206,7 @@ pub fn wake_up_entity(world: &mut World, entity: Entity, caused_by: Entity) -> O
 
 /// Check if entity can act on their turn
 pub fn can_entity_act(world: &World, entity: Entity) -> bool {
-    if let Ok(query) = world.query_one::<&StatusEffects>(entity) {
+    if let Ok(mut query) = world.query_one::<&StatusEffects>(entity) {
         if let Some(statuses) = query.get() {
             return !statuses.is_action_prevented();
         }

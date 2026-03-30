@@ -940,17 +940,81 @@ impl CutsceneEditor {
 
         // Render preview
         if let Some(frame) = self.timeline.render_preview(world) {
-            // Draw preview content
-            // In a real implementation, this would render the actual scene
-            // For now, draw placeholder text
+            // Draw preview content with actual cutscene data
+            let camera = &frame.camera;
+            
+            // Draw camera view frame
+            let preview_rect = rect.shrink(20.0);
+            painter.rect_stroke(preview_rect, 0.0, (2.0, egui::Color32::WHITE));
+            
+            // Draw grid to represent the scene
+            let grid_color = egui::Color32::from_gray(40);
+            let grid_spacing = 50.0;
+            let mut x = preview_rect.min.x;
+            while x < preview_rect.max.x {
+                painter.line_segment(
+                    [egui::Pos2::new(x, preview_rect.min.y), egui::Pos2::new(x, preview_rect.max.y)],
+                    (1.0, grid_color),
+                );
+                x += grid_spacing;
+            }
+            let mut y = preview_rect.min.y;
+            while y < preview_rect.max.y {
+                painter.line_segment(
+                    [egui::Pos2::new(preview_rect.min.x, y), egui::Pos2::new(preview_rect.max.x, y)],
+                    (1.0, grid_color),
+                );
+                y += grid_spacing;
+            }
+            
+            // Draw camera position indicator
+            let center = preview_rect.center();
+            let cam_x = center.x + camera.position.x * 10.0;
+            let cam_y = center.y + camera.position.y * 10.0;
+            painter.circle_filled(
+                egui::Pos2::new(cam_x, cam_y),
+                8.0 * camera.zoom,
+                egui::Color32::YELLOW,
+            );
+            
+            // Draw actors from track data
+            for track in &self.timeline.tracks {
+                // Find the active keyframe at current time by iterating
+                let active_keyframe = track.keyframes.iter()
+                    .filter(|kf| kf.time <= frame.time)
+                    .last();
+                
+                if let Some(keyframe) = active_keyframe {
+                    match &keyframe.value {
+                        crate::timeline::TrackValue::Entity(ent) => {
+                            let actor_x = center.x + ent.position.x * 10.0;
+                            let actor_y = center.y + ent.position.y * 10.0;
+                            let color = if ent.visible { egui::Color32::GREEN } else { egui::Color32::GRAY };
+                            painter.circle_stroke(
+                                egui::Pos2::new(actor_x, actor_y),
+                                12.0,
+                                (2.0, color),
+                            );
+                            painter.text(
+                                egui::Pos2::new(actor_x, actor_y - 18.0),
+                                egui::Align2::CENTER_BOTTOM,
+                                &track.name,
+                                egui::FontId::proportional(10.0),
+                                color,
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            
+            // Draw HUD info
             painter.text(
-                rect.center(),
-                egui::Align2::CENTER_CENTER,
-                format!(
-                    "Preview\nTime: {:.2}s\nCamera: {:.1}, {:.1}, {:.1}",
-                    frame.time, frame.camera.position.x, frame.camera.position.y, frame.camera.zoom
-                ),
-                egui::FontId::proportional(16.0),
+                rect.left_top() + egui::Vec2::new(10.0, 10.0),
+                egui::Align2::LEFT_TOP,
+                format!("Time: {:.2}s | Camera: ({:.1}, {:.1}, {:.1}) | Zoom: {:.1}x",
+                    frame.time, camera.position.x, camera.position.y, camera.position.z, camera.zoom),
+                egui::FontId::proportional(12.0),
                 egui::Color32::WHITE,
             );
 

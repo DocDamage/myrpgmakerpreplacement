@@ -1,444 +1,209 @@
-//! Turn queue management for ATB battle system
+//! Turn Queue System
 //!
-//! Handles:
-//! - ATB gauge updates
-//! - Turn ordering
-//! - Action queue
-//! - Status effect ticks
+//! ATB-based turn queue management for battle system.
 
-use dde_core::{Entity, World};
-use dde_core::components::battle::AtbGauge;
-use serde::{Deserialize, Serialize};
+use dde_core::Entity;
+use std::collections::VecDeque;
 
-use crate::skills::{Skill, SkillId};
-use crate::status::{StatusEffects};
+/// ATB gauge for a combatant
+#[derive(Debug, Clone, Copy)]
+pub struct AtbGauge {
+    /// Current ATB value (0-100)
+    pub value: f32,
+    /// Speed stat (affects fill rate)
+    pub speed: i32,
+    /// Maximum ATB value
+    pub max: f32,
+}
 
-/// Turn queue manager
+impl AtbGauge {
+    /// Create a new ATB gauge with given speed
+    pub fn new(speed: i32) -> Self {
+        Self {
+            value: 0.0,
+            speed,
+            max: 100.0,
+        }
+    }
+
+    /// Create from speed stat
+    pub fn from_speed(speed: i32) -> Self {
+        Self::new(speed)
+    }
+
+    /// Reset gauge to 0
+    pub fn reset(&mut self) {
+        self.value = 0.0;
+    }
+
+    /// Fill gauge to max
+    pub fn fill(&mut self) {
+        self.value = self.max;
+    }
+
+    /// Tick the gauge (called each update)
+    pub fn tick(&mut self) {
+        let increment = self.speed as f32 * 0.1; // Base increment
+        self.value = (self.value + increment).min(self.max);
+    }
+
+    /// Check if gauge is full (ready to act)
+    pub fn is_full(&self) -> bool {
+        self.value >= self.max
+    }
+
+    /// Get fill percentage (0-100)
+    pub fn percentage(&self) -> f32 {
+        (self.value / self.max) * 100.0
+    }
+}
+
+impl Default for AtbGauge {
+    fn default() -> Self {
+        Self::new(50)
+    }
+}
+
+/// Turn queue entry
+#[derive(Debug, Clone, Copy)]
+pub struct TurnEntry {
+    /// Entity ID
+    pub entity: Entity,
+    /// ATB gauge value at time of entry
+    pub atb_value: f32,
+    /// Entry timestamp
+    pub tick: u64,
+}
+
+/// Turn queue for managing battle turns
 #[derive(Debug, Clone)]
 pub struct TurnQueue {
-    /// Combatants in the battle
-    combatants: Vec<CombatantInfo>,
-    /// Queue of ready combatants (ATB full)
-    ready_queue: Vec<Entity>,
-    /// Currently active combatant
-    active_entity: Option<Entity>,
-    /// Current turn number
-    turn_number: u32,
-    /// Action history
-    action_history: Vec<ActionRecord>,
-}
-
-/// Combatant info tracked by turn queue
-#[derive(Debug, Clone)]
-pub struct CombatantInfo {
-    pub entity: Entity,
-    pub is_player: bool,
-    pub is_alive: bool,
-    /// Current ATB value (0-100)
-    pub atb: f32,
-    /// ATB fill rate per tick
-    pub atb_rate: f32,
-    /// Current status effects
-    pub status_effects: Vec<StatusEffectInstance>,
-    /// Cooldowns for skills (skill_id -> turns remaining)
-    pub cooldowns: std::collections::HashMap<SkillId, u32>,
-}
-
-/// Status effect instance
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct StatusEffectInstance {
-    pub effect_type: StatusEffectType,
-    pub remaining_turns: u32,
-    pub potency: i32,
-}
-
-/// Status effect types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum StatusEffectType {
-    Poison,
-    Burn,
-    Regen,
-    Haste,
-    Slow,
-    Stun,
-    Shield,
-    AttackUp,
-    DefenseUp,
-    MagicUp,
-    SpeedUp,
-    AttackDown,
-    DefenseDown,
-    MagicDown,
-    SpeedDown,
-}
-
-/// Battle action
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BattleAction {
-    pub actor: Entity,
-    pub action_type: ActionType,
-    pub target: Option<Entity>,
-}
-
-/// Type of battle action
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ActionType {
-    Attack,
-    Skill(SkillId),
-    Item(u32), // Item ID
-    Defend,
-    Flee,
-}
-
-/// Action record for history/log
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActionRecord {
-    pub turn: u32,
-    pub actor: Entity,
-    pub action: BattleAction,
-    pub result_summary: String,
+    /// Queue of ready entities (ATB full)
+    ready_queue: VecDeque<TurnEntry>,
+    /// Current tick count
+    tick_count: u64,
+    /// All tracked gauges
+    gauges: Vec<(Entity, AtbGauge)>,
 }
 
 impl TurnQueue {
-    /// Create new turn queue
+    /// Create a new turn queue
     pub fn new() -> Self {
         Self {
-            combatants: Vec::new(),
-            ready_queue: Vec::new(),
-            active_entity: None,
-            turn_number: 0,
-            action_history: Vec::new(),
+            ready_queue: VecDeque::new(),
+            tick_count: 0,
+            gauges: Vec::new(),
         }
     }
-    
-    /// Add combatant to the queue
-    pub fn add_combatant(&mut self, entity: Entity, is_player: bool, atb_rate: f32) {
-        self.combatants.push(CombatantInfo {
-            entity,
-            is_player,
-            is_alive: true,
-            atb: if is_player { 0.0 } else { 0.0 }, // Players get slight advantage
-            atb_rate,
-            status_effects: Vec::new(),
-            cooldowns: std::collections::HashMap::new(),
-        });
-    }
-    
-    /// Remove combatant from queue
-    pub fn remove_combatant(&mut self, entity: Entity) {
-        self.combatants.retain(|c| c.entity != entity);
-        self.ready_queue.retain(|&e| e != entity);
-    }
-    
-    /// Update all ATB gauges
-    /// 
-    /// Integrates with StatusEffects component for haste/slow/stop modifiers
-    pub fn tick(&mut self, world: &mut World) {
-        // Don't update if someone is taking their turn
-        if self.active_entity.is_some() {
-            return;
-        }
-        
-        for combatant in &mut self.combatants {
-            if !combatant.is_alive {
-                continue;
-            }
-            
-            // Check for stun (prevents ATB gain)
-            if combatant.has_status(StatusEffectType::Stun) {
-                continue;
-            }
-            
-            // Get status effect ATB modifier from StatusEffects component
-            let status_atb_mod = world.query_one::<&StatusEffects>(combatant.entity)
-                .ok()
-                .and_then(|mut q| q.get().cloned())
-                .map(|se| se.atb_modifier())
-                .unwrap_or(1.0);
-            
-            // Legacy status effect support (will be deprecated)
-            let legacy_mod = 1.0;
-            if combatant.has_status(StatusEffectType::Haste) {
-                legacy_mod *= 2.0;
-            }
-            if combatant.has_status(StatusEffectType::Slow) {
-                legacy_mod *= 0.5;
-            }
-            
-            // Calculate final rate combining both systems
-            let rate = combatant.atb_rate * status_atb_mod * legacy_mod;
-            
-            // Hard stop if StatusEffects says so
-            if status_atb_mod == 0.0 {
-                continue;
-            }
-            
-            // Update ATB
-            combatant.atb = (combatant.atb + rate).min(100.0);
-            
-            // Sync with component
-            if let Ok(atb_comp) = world.query_one_mut::<&mut AtbGauge>(combatant.entity) {
-                atb_comp.current = combatant.atb;
-            }
-            
-            // Check if ready for action
-            if combatant.atb >= 100.0 && !self.ready_queue.contains(&combatant.entity) {
-                self.ready_queue.push(combatant.entity);
-            }
-        }
-        
-        // Process legacy status effects (damage over time, etc.)
-        self.process_status_effects(world);
-    }
-    
-    /// Get next ready combatant
-    pub fn get_next_ready(&mut self) -> Option<Entity> {
-        // Sort ready queue by ATB value (highest first)
-        self.ready_queue.sort_by_key(|&entity| {
-            let atb = self.combatants
-                .iter()
-                .find(|c| c.entity == entity)
-                .map(|c| -(c.atb as i32))
-                .unwrap_or(0);
-            atb
-        });
-        
-        self.ready_queue.first().copied()
-    }
-    
-    /// Start a combatant's turn
-    pub fn start_turn(&mut self, entity: Entity) -> bool {
-        if !self.ready_queue.contains(&entity) {
-            return false;
-        }
-        
-        self.ready_queue.retain(|&e| e != entity);
-        self.active_entity = Some(entity);
-        self.turn_number += 1;
-        
-        // Reduce cooldowns
-        if let Some(combatant) = self.combatants.iter_mut().find(|c| c.entity == entity) {
-            for cooldown in combatant.cooldowns.values_mut() {
-                *cooldown = cooldown.saturating_sub(1);
-            }
-            combatant.cooldowns.retain(|_, v| *v > 0);
-        }
-        
-        true
-    }
-    
-    /// End current turn
-    pub fn end_turn(&mut self) {
-        if let Some(entity) = self.active_entity {
-            // Reset ATB
-            if let Some(combatant) = self.combatants.iter_mut().find(|c| c.entity == entity) {
-                combatant.atb = 0.0;
-            }
-        }
-        
-        self.active_entity = None;
-    }
-    
-    /// Get active entity
-    pub fn active_entity(&self) -> Option<Entity> {
-        self.active_entity
-    }
-    
-    /// Get current turn number
-    pub fn turn_number(&self) -> u32 {
-        self.turn_number
-    }
-    
-    /// Check if entity can use a skill
-    pub fn can_use_skill(&self, entity: Entity, skill: &Skill) -> Result<(), String> {
-        let combatant = self.combatants
-            .iter()
-            .find(|c| c.entity == entity)
-            .ok_or("Entity not in battle")?;
-        
-        // Check cooldown
-        if let Some(&cooldown) = combatant.cooldowns.get(&skill.id) {
-            if cooldown > 0 {
-                return Err(format!("Skill on cooldown: {} turns remaining", cooldown));
-            }
-        }
-        
-        // Check if stunned
-        if combatant.has_status(StatusEffectType::Stun) {
-            return Err("Cannot act while stunned".to_string());
-        }
-        
-        Ok(())
-    }
-    
-    /// Apply skill cooldown
-    pub fn apply_cooldown(&mut self, entity: Entity, skill_id: SkillId, cooldown: u32) {
-        if let Some(combatant) = self.combatants.iter_mut().find(|c| c.entity == entity) {
-            if cooldown > 0 {
-                combatant.cooldowns.insert(skill_id, cooldown);
-            }
-        }
-    }
-    
-    /// Apply status effect
-    pub fn apply_status(&mut self, entity: Entity, effect: StatusEffectType, duration: u32, potency: i32) {
-        if let Some(combatant) = self.combatants.iter_mut().find(|c| c.entity == entity) {
-            // Remove existing effect of same type
-            combatant.status_effects.retain(|e| e.effect_type != effect);
-            
-            combatant.status_effects.push(StatusEffectInstance {
-                effect_type: effect,
-                remaining_turns: duration,
-                potency,
-            });
-        }
-    }
-    
-    /// Remove status effect
-    pub fn remove_status(&mut self, entity: Entity, effect: StatusEffectType) {
-        if let Some(combatant) = self.combatants.iter_mut().find(|c| c.entity == entity) {
-            combatant.status_effects.retain(|e| e.effect_type != effect);
-        }
-    }
-    
-    /// Process status effects (DoT, HoT, etc.)
-    fn process_status_effects(&mut self, _world: &mut World) {
-        for combatant in &mut self.combatants {
-            if !combatant.is_alive {
-                continue;
-            }
-            
-            let mut damage = 0;
-            let mut healing = 0;
-            
-            for effect in &mut combatant.status_effects {
-                match effect.effect_type {
-                    StatusEffectType::Poison | StatusEffectType::Burn => {
-                        damage += effect.potency;
-                    }
-                    StatusEffectType::Regen => {
-                        healing += effect.potency;
-                    }
-                    _ => {}
-                }
-                
-                effect.remaining_turns = effect.remaining_turns.saturating_sub(1);
-            }
-            
-            // Remove expired effects
-            combatant.status_effects.retain(|e| e.remaining_turns > 0);
-            
-            // Apply damage/healing (would need HP component access here)
-            // For now, just log it
-            if damage > 0 {
-                tracing::debug!("Entity {:?} takes {} DoT damage", combatant.entity, damage);
-            }
-            if healing > 0 {
-                tracing::debug!("Entity {:?} heals {} from regen", combatant.entity, healing);
-            }
-        }
-    }
-    
-    /// Mark combatant as defeated
-    pub fn defeat_combatant(&mut self, entity: Entity) {
-        if let Some(combatant) = self.combatants.iter_mut().find(|c| c.entity == entity) {
-            combatant.is_alive = false;
-            combatant.atb = 0.0;
-        }
-        self.ready_queue.retain(|&e| e != entity);
-        
-        if self.active_entity == Some(entity) {
-            self.active_entity = None;
-        }
-    }
-    
-    /// Get all alive combatants
-    pub fn alive_combatants(&self) -> Vec<Entity> {
-        self.combatants
-            .iter()
-            .filter(|c| c.is_alive)
-            .map(|c| c.entity)
-            .collect()
-    }
-    
-    /// Get all alive player combatants
-    pub fn alive_players(&self) -> Vec<Entity> {
-        self.combatants
-            .iter()
-            .filter(|c| c.is_alive && c.is_player)
-            .map(|c| c.entity)
-            .collect()
-    }
-    
-    /// Get all alive enemy combatants
-    pub fn alive_enemies(&self) -> Vec<Entity> {
-        self.combatants
-            .iter()
-            .filter(|c| c.is_alive && !c.is_player)
-            .map(|c| c.entity)
-            .collect()
-    }
-    
-    /// Check if all players are defeated
-    pub fn all_players_defeated(&self) -> bool {
-        self.alive_players().is_empty()
-    }
-    
-    /// Check if all enemies are defeated
-    pub fn all_enemies_defeated(&self) -> bool {
-        self.alive_enemies().is_empty()
-    }
-    
-    /// Get combatant info
-    pub fn get_combatant(&self, entity: Entity) -> Option<&CombatantInfo> {
-        self.combatants.iter().find(|c| c.entity == entity)
-    }
-    
-    /// Get mutable combatant info
-    pub fn get_combatant_mut(&mut self, entity: Entity) -> Option<&mut CombatantInfo> {
-        self.combatants.iter_mut().find(|c| c.entity == entity)
-    }
-    
-    /// Record action in history
-    pub fn record_action(&mut self, action: BattleAction, result_summary: String) {
-        if let Some(actor) = self.active_entity {
-            self.action_history.push(ActionRecord {
-                turn: self.turn_number,
-                actor,
-                action,
-                result_summary,
-            });
-        }
-    }
-    
-    /// Get action history
-    pub fn action_history(&self) -> &[ActionRecord] {
-        &self.action_history
-    }
-    
-    /// Clear the queue (end of battle)
-    pub fn clear(&mut self) {
-        self.combatants.clear();
-        self.ready_queue.clear();
-        self.active_entity = None;
-        self.turn_number = 0;
-        self.action_history.clear();
-    }
-}
 
-impl CombatantInfo {
-    /// Check if combatant has a status effect
-    pub fn has_status(&self, effect: StatusEffectType) -> bool {
-        self.status_effects.iter().any(|e| e.effect_type == effect)
+    /// Register a combatant with the queue
+    pub fn register(&mut self, entity: Entity, speed: i32) {
+        if !self.gauges.iter().any(|(e, _)| *e == entity) {
+            self.gauges.push((entity, AtbGauge::new(speed)));
+        }
     }
-    
-    /// Get status effect potency
-    pub fn get_status_potency(&self, effect: StatusEffectType) -> i32 {
-        self.status_effects
-            .iter()
-            .find(|e| e.effect_type == effect)
-            .map(|e| e.potency)
-            .unwrap_or(0)
+
+    /// Unregister a combatant
+    pub fn unregister(&mut self, entity: Entity) {
+        self.gauges.retain(|(e, _)| *e != entity);
+        self.ready_queue.retain(|e| e.entity != entity);
+    }
+
+    /// Reset all gauges
+    pub fn reset_all(&mut self) {
+        for (_, gauge) in &mut self.gauges {
+            gauge.reset();
+        }
+        self.ready_queue.clear();
+    }
+
+    /// Reset specific entity's gauge
+    pub fn reset_entity(&mut self, entity: Entity) {
+        if let Some((_, gauge)) = self.gauges.iter_mut().find(|(e, _)| *e == entity) {
+            gauge.reset();
+        }
+        self.ready_queue.retain(|e| e.entity != entity);
+    }
+
+    /// Update all gauges (call each tick)
+    pub fn tick(&mut self) {
+        self.tick_count += 1;
+
+        for (entity, gauge) in &mut self.gauges {
+            let was_full = gauge.is_full();
+            gauge.tick();
+            
+            // If just became full, add to ready queue
+            if !was_full && gauge.is_full() {
+                self.ready_queue.push_back(TurnEntry {
+                    entity: *entity,
+                    atb_value: gauge.value,
+                    tick: self.tick_count,
+                });
+            }
+        }
+    }
+
+    /// Get the next ready entity
+    pub fn next_ready(&mut self) -> Option<Entity> {
+        self.ready_queue.pop_front().map(|e| e.entity)
+    }
+
+    /// Peek at the next ready entity without removing
+    pub fn peek_ready(&self) -> Option<Entity> {
+        self.ready_queue.front().map(|e| e.entity)
+    }
+
+    /// Check if any entity is ready
+    pub fn has_ready(&self) -> bool {
+        !self.ready_queue.is_empty()
+    }
+
+    /// Get count of ready entities
+    pub fn ready_count(&self) -> usize {
+        self.ready_queue.len()
+    }
+
+    /// Get all ready entities
+    pub fn get_ready(&self) -> Vec<Entity> {
+        self.ready_queue.iter().map(|e| e.entity).collect()
+    }
+
+    /// Get ATB gauge for an entity
+    pub fn get_gauge(&self, entity: Entity) -> Option<&AtbGauge> {
+        self.gauges.iter().find(|(e, _)| *e == entity).map(|(_, g)| g)
+    }
+
+    /// Get mutable ATB gauge for an entity
+    pub fn get_gauge_mut(&mut self, entity: Entity) -> Option<&mut AtbGauge> {
+        self.gauges.iter_mut().find(|(e, _)| *e == entity).map(|(_, g)| g)
+    }
+
+    /// Get all entities and their gauges
+    pub fn get_all_gauges(&self) -> &[(Entity, AtbGauge)] {
+        &self.gauges
+    }
+
+    /// Get current tick count
+    pub fn tick_count(&self) -> u64 {
+        self.tick_count
+    }
+
+    /// Clear the queue
+    pub fn clear(&mut self) {
+        self.ready_queue.clear();
+        self.gauges.clear();
+        self.tick_count = 0;
+    }
+
+    /// Get number of registered combatants
+    pub fn len(&self) -> usize {
+        self.gauges.len()
+    }
+
+    /// Check if queue is empty
+    pub fn is_empty(&self) -> bool {
+        self.gauges.is_empty()
     }
 }
 
@@ -451,73 +216,58 @@ impl Default for TurnQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    fn create_test_entity() -> (World, Entity) {
-        let mut world = World::new();
-        let entity = world.spawn(());
-        (world, entity)
-    }
-    
+
     #[test]
-    fn test_turn_queue_basic() {
-        let mut queue = TurnQueue::new();
-        let (_world, entity) = create_test_entity();
-        
-        queue.add_combatant(entity, true, 10.0);
-        
-        assert!(queue.get_combatant(entity).is_some());
-        assert_eq!(queue.alive_combatants().len(), 1);
+    fn test_turn_queue_creation() {
+        let queue = TurnQueue::new();
+        assert!(queue.is_empty());
+        assert_eq!(queue.ready_count(), 0);
     }
-    
+
     #[test]
-    fn test_status_effects() {
+    fn test_register_unregister() {
         let mut queue = TurnQueue::new();
-        let (_world, entity) = create_test_entity();
-        
-        queue.add_combatant(entity, true, 10.0);
-        
-        // Apply poison
-        queue.apply_status(entity, StatusEffectType::Poison, 3, 10);
-        
-        let combatant = queue.get_combatant(entity).unwrap();
-        assert!(combatant.has_status(StatusEffectType::Poison));
-        assert_eq!(combatant.get_status_potency(StatusEffectType::Poison), 10);
-        
-        // Remove poison
-        queue.remove_status(entity, StatusEffectType::Poison);
-        
-        let combatant = queue.get_combatant(entity).unwrap();
-        assert!(!combatant.has_status(StatusEffectType::Poison));
+        let entity = Entity::from_id(1);
+
+        queue.register(entity, 100);
+        assert_eq!(queue.len(), 1);
+
+        queue.unregister(entity);
+        assert!(queue.is_empty());
     }
-    
+
     #[test]
-    fn test_defeat_combatant() {
-        let mut queue = TurnQueue::new();
-        let (_world, entity) = create_test_entity();
+    fn test_atb_gauge() {
+        let mut gauge = AtbGauge::new(100);
+        assert!(!gauge.is_full());
         
-        queue.add_combatant(entity, true, 10.0);
-        queue.defeat_combatant(entity);
+        gauge.tick();
+        assert!(gauge.value > 0.0);
         
-        assert!(queue.all_players_defeated());
-        assert!(queue.alive_combatants().is_empty());
+        gauge.fill();
+        assert!(gauge.is_full());
+        
+        gauge.reset();
+        assert_eq!(gauge.value, 0.0);
     }
-    
+
     #[test]
-    fn test_cooldowns() {
+    fn test_turn_queue_tick() {
         let mut queue = TurnQueue::new();
-        let (_world, entity) = create_test_entity();
+        let entity = Entity::from_id(1);
+
+        queue.register(entity, 1000); // Very fast
         
-        queue.add_combatant(entity, true, 10.0);
-        queue.apply_cooldown(entity, 1, 3);
-        
-        let combatant = queue.get_combatant(entity).unwrap();
-        assert_eq!(combatant.cooldowns.get(&1), Some(&3));
-        
-        // Simulate turn start to reduce cooldown
-        queue.ready_queue.push(entity);
-        queue.start_turn(entity);
-        
-        let combatant = queue.get_combatant(entity).unwrap();
-        assert_eq!(combatant.cooldowns.get(&1), Some(&2));
+        // Tick many times
+        for _ in 0..20 {
+            queue.tick();
+            if queue.has_ready() {
+                break;
+            }
+        }
+
+        // Fast entity should become ready
+        assert!(queue.has_ready());
+        assert_eq!(queue.next_ready(), Some(entity));
     }
 }

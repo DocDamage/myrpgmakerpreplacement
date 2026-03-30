@@ -47,10 +47,12 @@ pub struct SyncClient {
     /// Pending operations queue
     pending_ops: Arc<Mutex<Vec<SyncMessage>>>,
     /// Message handler callback
-    message_handler: Option<Box<dyn Fn(SyncMessage) + Send + Sync>>,
+    message_handler: Option<Arc<dyn Fn(SyncMessage) + Send + Sync>>,
     /// Background task handles
     _send_task: Option<tokio::task::JoinHandle<()>>,
     _receive_task: Option<tokio::task::JoinHandle<()>>,
+    /// Connection error message
+    last_error: Arc<RwLock<Option<String>>>,
 }
 
 /// Client configuration
@@ -91,6 +93,7 @@ impl SyncClient {
             message_handler: None,
             _send_task: None,
             _receive_task: None,
+            last_error: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -104,6 +107,15 @@ impl SyncClient {
         *self.state.read().await
     }
 
+    /// Get connection state synchronously (may block)
+    pub fn state_blocking(&self) -> ConnectionState {
+        if let Ok(state) = self.state.try_read() {
+            *state
+        } else {
+            ConnectionState::Connecting // Assume connecting if locked
+        }
+    }
+
     /// Get collaborators
     pub async fn collaborators(&self) -> HashMap<Uuid, UserPresence> {
         self.collaborators.read().await.clone()
@@ -114,7 +126,12 @@ impl SyncClient {
     where
         F: Fn(SyncMessage) + Send + Sync + 'static,
     {
-        self.message_handler = Some(Box::new(handler));
+        self.message_handler = Some(Arc::new(handler));
+    }
+
+    /// Get the last error message
+    pub async fn last_error(&self) -> Option<String> {
+        self.last_error.read().await.clone()
     }
 
     /// Connect to collaboration server
@@ -143,7 +160,8 @@ impl SyncClient {
         let locked_entities = self.locked_entities.clone();
         let pending_ops = self.pending_ops.clone();
         let client_id = self.client_id;
-        let message_handler = self.message_handler.take();
+        let message_handler = self.message_handler.clone();
+        let last_error = self.last_error.clone();
 
         // Send Hello message
         let hello = SyncMessage::Hello {
@@ -183,7 +201,7 @@ impl SyncClient {
                                 &collaborators,
                                 &locked_entities,
                                 &pending_ops,
-                                message_handler.as_ref(),
+                                message_handler.clone(),
                             )
                             .await;
                         }
@@ -198,6 +216,7 @@ impl SyncClient {
                     Ok(_) => {}
                     Err(e) => {
                         tracing::error!("WebSocket error: {}", e);
+                        *last_error.write().await = Some(e.to_string());
                         break;
                     }
                 }
@@ -222,7 +241,12 @@ impl SyncClient {
         if let Some(task) = self._receive_task.take() {
             task.abort();
         }
-        self.connection = None;
+        
+        // Close WebSocket gracefully
+        if let Some(mut conn) = self.connection.take() {
+            let _ = conn.close(None).await;
+        }
+        
         self.tx = None;
         *self.state.write().await = ConnectionState::Disconnected;
         self.collaborators.write().await.clear();
@@ -333,6 +357,14 @@ impl SyncClient {
         self.send(SyncMessage::RequestSync).await
     }
 
+    /// Send ping/heartbeat
+    pub async fn ping(&self) -> Result<()> {
+        let msg = SyncMessage::Ping {
+            timestamp: current_timestamp(),
+        };
+        self.send(msg).await
+    }
+
     /// Send a raw message
     async fn send(&self, msg: SyncMessage) -> Result<()> {
         if let Some(tx) = &self.tx {
@@ -346,15 +378,14 @@ impl SyncClient {
     }
 
     /// Handle incoming messages
-    #[allow(clippy::borrowed_box)]
     async fn handle_incoming(
         client_id: Uuid,
         msg: SyncMessage,
         _state: &Arc<RwLock<ConnectionState>>,
         collaborators: &Arc<RwLock<HashMap<Uuid, UserPresence>>>,
         locked_entities: &Arc<RwLock<HashSet<Entity>>>,
-        _pending_ops: &Arc<Mutex<Vec<SyncMessage>>>,
-        handler: Option<&Box<dyn Fn(SyncMessage) + Send + Sync>>,
+        pending_ops: &Arc<Mutex<Vec<SyncMessage>>>,
+        handler: Option<Arc<dyn Fn(SyncMessage) + Send + Sync>>,
     ) {
         // Call user handler if set
         if let Some(h) = handler {
@@ -444,10 +475,18 @@ impl SyncClient {
                     "Received sync state for project {}",
                     project_state.project_id
                 );
+                
+                // Clear pending operations after successful sync
+                pending_ops.lock().await.clear();
             }
 
             SyncMessage::Error { code, message } => {
                 tracing::error!("Server error: {:?} - {}", code, message);
+            }
+
+            SyncMessage::Pong { timestamp } => {
+                let latency = current_timestamp() - timestamp;
+                tracing::debug!("Ping latency: {}ms", latency);
             }
 
             _ => {}
@@ -468,6 +507,37 @@ impl SyncClient {
     pub async fn is_connected(&self) -> bool {
         *self.state.read().await == ConnectionState::Connected
     }
+
+    /// Get pending operations count
+    pub async fn pending_count(&self) -> usize {
+        self.pending_ops.lock().await.len()
+    }
+
+    /// Flush pending operations (send them if now connected)
+    pub async fn flush_pending(&self) -> Result<usize> {
+        let mut pending = self.pending_ops.lock().await;
+        let count = pending.len();
+        
+        if count > 0 && self.is_connected().await {
+            for msg in pending.drain(..) {
+                if let Some(tx) = &self.tx {
+                    let _ = tx.send(msg);
+                }
+            }
+        }
+        
+        Ok(count)
+    }
+
+    /// Get username
+    pub fn username(&self) -> &str {
+        &self.config.username
+    }
+
+    /// Get project ID
+    pub fn project_id(&self) -> &str {
+        &self.config.project_id
+    }
 }
 
 fn current_timestamp() -> u64 {
@@ -475,4 +545,45 @@ fn current_timestamp() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as u64
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_client_config() {
+        let config = ClientConfig::new("ws://test.com", "TestUser", "project1");
+        assert_eq!(config.server_url, "ws://test.com");
+        assert_eq!(config.username, "TestUser");
+        assert_eq!(config.project_id, "project1");
+        assert!(config.auto_reconnect);
+    }
+
+    #[test]
+    fn test_client_creation() {
+        let config = ClientConfig::new("ws://test.com", "TestUser", "project1");
+        let client = SyncClient::new(config);
+        
+        // Client ID should be unique
+        assert_ne!(client.client_id(), Uuid::nil());
+    }
+
+    #[test]
+    fn test_connection_state() {
+        let config = ClientConfig::new("ws://test.com", "TestUser", "project1");
+        let client = SyncClient::new(config);
+        
+        // Initial state should be disconnected
+        assert_eq!(client.state_blocking(), ConnectionState::Disconnected);
+    }
+
+    #[test]
+    fn test_client_getters() {
+        let config = ClientConfig::new("ws://test.com", "TestUser", "project1");
+        let client = SyncClient::new(config);
+        
+        assert_eq!(client.username(), "TestUser");
+        assert_eq!(client.project_id(), "project1");
+    }
 }

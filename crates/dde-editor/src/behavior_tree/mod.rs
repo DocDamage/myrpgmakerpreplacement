@@ -33,6 +33,11 @@ pub mod debugger;
 pub mod editor;
 pub mod nodes;
 
+// Re-export the enhanced visual editor from behavior_tree_editor module
+pub use crate::behavior_tree_editor::{
+    BehaviorTreeVisualEditor, ConnectionSource, EditorConfig, EditorTheme, ExecutionMode,
+    NodeTheme,
+};
 pub use compiler::{compile, CompileError};
 pub use dde_core::ai::NodeId;
 pub use debugger::{draw_entity_debug, status_color, status_color_dark, BtDebugStats, BtDebugger};

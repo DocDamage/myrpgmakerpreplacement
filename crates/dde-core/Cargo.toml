@@ -39,6 +39,7 @@ winit = { workspace = true }
 uuid = { workspace = true }
 bitflags = { workspace = true }
 indexmap = { workspace = true }
+regex-lite = { workspace = true }
 
 # Encryption
 aes-gcm = "0.10"

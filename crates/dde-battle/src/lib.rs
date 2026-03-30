@@ -5,6 +5,19 @@
 use dde_core::components::battle::AtbGauge;
 use dde_core::{Entity, World};
 
+/// Damage calculation module
+pub mod damage;
+
+/// Skills module
+pub mod skills;
+
+// Re-export damage calculation types
+pub use damage::{
+    calculate_damage, calculate_evasion, get_elemental_multiplier, apply_stat_modifier,
+    preview_damage, DamageCalculator, DamageParams, DamagePreview, DamageResult,
+    SimulationResult,
+};
+
 /// Battle state machine
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BattleState {
@@ -166,9 +179,27 @@ impl Default for BattleSystem {
 /// Item system
 pub mod items;
 
+/// Status effect system
+pub mod status;
+
+/// Battle log system
+pub mod log;
+
+/// Formation system
+pub mod formation;
+
+/// Turn queue system
+pub mod turn_queue;
+
 /// UI components (requires `ui` feature)
 #[cfg(feature = "ui")]
 pub mod ui;
+
+// Re-export commonly used types
+pub use log::{BattleLog, LogEntry, LogEntryType, LogSeverity, LogStyle};
+pub use log::{CombatantStatistics, CombatantStats, LogBuilder};
+pub use formation::{Formation, FormationSlot, FormationPosition};
+pub use turn_queue::TurnQueue;
 
 #[cfg(test)]
 mod tests {

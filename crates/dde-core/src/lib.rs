@@ -11,6 +11,9 @@ pub mod pathfinding;
 pub mod platform;
 pub mod profiler;
 pub mod replay;
+// Re-export formula types
+pub use resources::formula::{FormulaKind, FormulaResource, FormulaContext, CombatantStats, validate_formula};
+
 pub mod resources;
 pub mod save;
 pub mod serialization;

@@ -9,10 +9,13 @@ license.workspace = true
 [dependencies]
 dde-core = { path = "../dde-core" }
 dde-ai = { path = "../dde-ai" }
+dde-battle = { path = "../dde-battle" }
 dde-render = { path = "../dde-render" }
 dde-db = { path = "../dde-db" }
 dde-export = { path = "../dde-export" }
 dde-sync = { path = "../dde-sync" }
+dde-asset-forge = { path = "../dde-asset-forge" }
+dde-lua = { path = "../dde-lua" }
 
 # UI
 egui = { workspace = true }
@@ -20,6 +23,7 @@ egui = { workspace = true }
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+toml = { workspace = true }
 
 # Utilities
 uuid = { workspace = true }
@@ -39,3 +43,10 @@ hecs = { workspace = true }
 
 # Random
 rand = { workspace = true }
+
+# Async
+futures = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+
+# Image processing (for thumbnails)
+image = { workspace = true }

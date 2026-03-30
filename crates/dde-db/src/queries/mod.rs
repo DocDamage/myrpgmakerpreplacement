@@ -168,6 +168,173 @@ impl EntityQueries {
     }
 }
 
+/// Queries for status effect templates
+pub struct StatusEffectQueries;
+
+/// Status effect template data model
+#[derive(Debug, Clone)]
+pub struct StatusEffectTemplateModel {
+    pub template_id: String,
+    pub name: String,
+    pub status_type: String,
+    pub duration: i32,
+    pub potency: i32,
+    pub tick_interval: i32,
+    pub stack_behavior: String,
+    pub resistance_category: String,
+    pub visual_effect: Option<String>,
+    pub icon_path: Option<String>,
+    pub dispellable: bool,
+    pub custom_description: Option<String>,
+    pub tags: String,
+    pub created_at: i64,
+    pub modified_at: i64,
+}
+
+impl StatusEffectQueries {
+    /// Get all status effect templates
+    pub fn get_all_templates(db: &Database) -> Result<Vec<StatusEffectTemplateModel>> {
+        let mut stmt = db.conn().prepare(
+            "SELECT template_id, name, status_type, duration, potency, tick_interval,
+                    stack_behavior, resistance_category, visual_effect, icon_path,
+                    dispellable, custom_description, tags, created_at, modified_at
+             FROM status_effect_templates
+             ORDER BY modified_at DESC"
+        )?;
+
+        let templates = stmt
+            .query_map([], |row| {
+                Ok(StatusEffectTemplateModel {
+                    template_id: row.get(0)?,
+                    name: row.get(1)?,
+                    status_type: row.get(2)?,
+                    duration: row.get(3)?,
+                    potency: row.get(4)?,
+                    tick_interval: row.get(5)?,
+                    stack_behavior: row.get(6)?,
+                    resistance_category: row.get(7)?,
+                    visual_effect: row.get(8)?,
+                    icon_path: row.get(9)?,
+                    dispellable: row.get(10)?,
+                    custom_description: row.get(11)?,
+                    tags: row.get(12)?,
+                    created_at: row.get(13)?,
+                    modified_at: row.get(14)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(templates)
+    }
+
+    /// Get a single status effect template by ID
+    pub fn get_template(db: &Database, template_id: &str) -> Result<Option<StatusEffectTemplateModel>> {
+        let template: Option<StatusEffectTemplateModel> = db.conn().query_row(
+            "SELECT template_id, name, status_type, duration, potency, tick_interval,
+                    stack_behavior, resistance_category, visual_effect, icon_path,
+                    dispellable, custom_description, tags, created_at, modified_at
+             FROM status_effect_templates
+             WHERE template_id = ?1",
+            [template_id],
+            |row| {
+                Ok(StatusEffectTemplateModel {
+                    template_id: row.get(0)?,
+                    name: row.get(1)?,
+                    status_type: row.get(2)?,
+                    duration: row.get(3)?,
+                    potency: row.get(4)?,
+                    tick_interval: row.get(5)?,
+                    stack_behavior: row.get(6)?,
+                    resistance_category: row.get(7)?,
+                    visual_effect: row.get(8)?,
+                    icon_path: row.get(9)?,
+                    dispellable: row.get(10)?,
+                    custom_description: row.get(11)?,
+                    tags: row.get(12)?,
+                    created_at: row.get(13)?,
+                    modified_at: row.get(14)?,
+                })
+            }
+        ).ok();
+
+        Ok(template)
+    }
+
+    /// Save (insert or update) a status effect template
+    pub fn save_template(db: &mut Database, template: &StatusEffectTemplateModel) -> Result<()> {
+        db.conn().execute(
+            "INSERT OR REPLACE INTO status_effect_templates 
+             (template_id, name, status_type, duration, potency, tick_interval,
+              stack_behavior, resistance_category, visual_effect, icon_path,
+              dispellable, custom_description, tags, created_at, modified_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+            (
+                &template.template_id,
+                &template.name,
+                &template.status_type,
+                &template.duration,
+                &template.potency,
+                &template.tick_interval,
+                &template.stack_behavior,
+                &template.resistance_category,
+                &template.visual_effect,
+                &template.icon_path,
+                &template.dispellable,
+                &template.custom_description,
+                &template.tags,
+                &template.created_at,
+                &template.modified_at,
+            ),
+        )?;
+        Ok(())
+    }
+
+    /// Delete a status effect template
+    pub fn delete_template(db: &mut Database, template_id: &str) -> Result<bool> {
+        let rows = db.conn().execute(
+            "DELETE FROM status_effect_templates WHERE template_id = ?1",
+            [template_id],
+        )?;
+        Ok(rows > 0)
+    }
+
+    /// Get templates by status type
+    pub fn get_templates_by_type(db: &Database, status_type: &str) -> Result<Vec<StatusEffectTemplateModel>> {
+        let mut stmt = db.conn().prepare(
+            "SELECT template_id, name, status_type, duration, potency, tick_interval,
+                    stack_behavior, resistance_category, visual_effect, icon_path,
+                    dispellable, custom_description, tags, created_at, modified_at
+             FROM status_effect_templates
+             WHERE status_type = ?1
+             ORDER BY modified_at DESC"
+        )?;
+
+        let templates = stmt
+            .query_map([status_type], |row| {
+                Ok(StatusEffectTemplateModel {
+                    template_id: row.get(0)?,
+                    name: row.get(1)?,
+                    status_type: row.get(2)?,
+                    duration: row.get(3)?,
+                    potency: row.get(4)?,
+                    tick_interval: row.get(5)?,
+                    stack_behavior: row.get(6)?,
+                    resistance_category: row.get(7)?,
+                    visual_effect: row.get(8)?,
+                    icon_path: row.get(9)?,
+                    dispellable: row.get(10)?,
+                    custom_description: row.get(11)?,
+                    tags: row.get(12)?,
+                    created_at: row.get(13)?,
+                    modified_at: row.get(14)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(templates)
+    }
+}
+
 /// Queries for dialogue trees
 pub struct DialogueQueries;
 

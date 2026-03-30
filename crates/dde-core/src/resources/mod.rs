@@ -1,5 +1,7 @@
 //! Resources - shared game state that doesn't belong to entities
 
+pub mod formula;
+
 use std::collections::HashMap;
 
 use rand::rngs::StdRng;

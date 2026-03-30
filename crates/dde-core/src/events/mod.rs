@@ -208,6 +208,19 @@ pub enum EngineEvent {
 
     /// Request quit
     QuitRequested,
+
+    // ==================== Script Events ====================
+    /// Notification requested (UI popup)
+    NotificationRequested {
+        text: String,
+        duration_secs: f32,
+    },
+
+    /// Game flag changed (for script condition tracking)
+    GameFlagChanged {
+        flag_key: String,
+        value: bool,
+    },
 }
 
 /// Battle result
