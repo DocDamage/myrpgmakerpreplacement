@@ -35,7 +35,9 @@ pub type ExecutionResult<T> = std::result::Result<T, ExecutionError>;
 
 /// Values that can be stored in script variables
 #[derive(Debug, Clone, PartialEq)]
+#[derive(Default)]
 pub enum ScriptValue {
+    #[default]
     None,
     Bool(bool),
     Number(f64),
@@ -88,11 +90,6 @@ impl ScriptValue {
     }
 }
 
-impl Default for ScriptValue {
-    fn default() -> Self {
-        ScriptValue::None
-    }
-}
 
 /// A stack frame for function call tracking
 #[derive(Debug, Clone)]

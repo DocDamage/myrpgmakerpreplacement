@@ -323,8 +323,7 @@ impl BtDebugger {
         painter.rect_stroke(bubble_rect, 5.0, (1.0, Color32::WHITE));
 
         // Current action text
-        let current_node = runner.running_node()
-            .and_then(|id| Some(format!("Node {:?}", id)))
+        let current_node = runner.running_node().map(|id| format!("Node {:?}", id))
             .unwrap_or_else(|| "Idle".to_string());
 
         painter.text(
@@ -394,7 +393,7 @@ pub fn status_color_dark(status: BtStatus) -> Color32 {
 /// Draw a node with debug status overlay
 pub fn draw_node_with_status(
     ui: &mut Ui,
-    node_rect: Rect,
+    _node_rect: Rect,
     node_id: NodeId,
     debugger: Option<&BtDebugger>,
     f: impl FnOnce(&mut Ui),
@@ -420,7 +419,6 @@ pub fn draw_node_with_status(
         
         if dbg.has_breakpoint(node_id) {
             // Add breakpoint indicator
-            let breakpoint_color = Color32::RED;
             frame = frame.fill(status_color_dark(dbg.node_status.get(&node_id).copied().unwrap_or(BtStatus::Running)));
         }
     }

@@ -595,13 +595,13 @@ impl CutsceneEditor {
     /// Draw keyframe properties
     fn draw_keyframe_properties(&mut self, ui: &mut egui::Ui) {
         // Extract what we need before borrowing
-        let selection_info = self.timeline.selection.as_ref().map(|s| {
+        let selection_info = self.timeline.selection.as_ref().and_then(|s| {
             if let crate::timeline::editor::Selection::Single { track_id, keyframe_index } = s {
                 Some((*track_id, *keyframe_index))
             } else {
                 None
             }
-        }).flatten();
+        });
         
         if let Some((track_id, keyframe_index)) = selection_info {
             // First pass: gather data from keyframe and draw UI elements that don't need self
@@ -648,8 +648,6 @@ impl CutsceneEditor {
                     // Clone the value temporarily to avoid borrow issues
                     let mut value = keyframe.value.clone();
                     let value_ref = &mut value;
-                    // End the mutable borrow of timeline before calling draw_value_editor
-                    drop(track);
                     self.draw_value_editor(ui, value_ref);
                     Some((track_id, keyframe_index, value))
                 } else {

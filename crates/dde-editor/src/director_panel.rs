@@ -220,7 +220,7 @@ impl DirectorPanel {
 
     /// Draw proposals tab
     fn draw_proposals_tab(&mut self, ui: &mut egui::Ui, director: &mut DirectorSystem) {
-        let proposals: Vec<_> = director.get_proposals().iter().cloned().collect();
+        let proposals: Vec<_> = director.get_proposals().to_vec();
 
         if proposals.is_empty() {
             ui.vertical_centered(|ui| {
@@ -349,7 +349,7 @@ impl DirectorPanel {
 
     /// Draw active quests tab
     fn draw_active_quests_tab(&mut self, ui: &mut egui::Ui, director: &mut DirectorSystem) {
-        let quests: Vec<_> = director.get_active_quests().iter().cloned().collect();
+        let quests: Vec<_> = director.get_active_quests().to_vec();
 
         if quests.is_empty() {
             ui.vertical_centered(|ui| {
@@ -432,12 +432,11 @@ impl DirectorPanel {
 
                 // Actions
                 ui.horizontal(|ui| {
-                    if quest.stage == QuestStage::ReadyForTurnIn {
-                        if ui.button("✓ Complete").clicked() {
+                    if quest.stage == QuestStage::ReadyForTurnIn
+                        && ui.button("✓ Complete").clicked() {
                             director.complete_quest(quest.id);
                             self.show_status(&format!("Completed: {}", quest.title), false);
                         }
-                    }
 
                     if ui.button("✗ Abandon").clicked() {
                         director.quest_pool.abandon_quest(quest.id);
@@ -451,7 +450,7 @@ impl DirectorPanel {
 
     /// Draw history tab
     fn draw_history_tab(&mut self, ui: &mut egui::Ui, director: &DirectorSystem) {
-        let history: Vec<_> = director.get_quest_history().iter().cloned().collect();
+        let history: Vec<_> = director.get_quest_history().to_vec();
 
         if history.is_empty() {
             ui.vertical_centered(|ui| {

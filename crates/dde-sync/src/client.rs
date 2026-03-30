@@ -52,6 +52,9 @@ pub struct SyncClient {
     pending_ops: Arc<Mutex<Vec<SyncMessage>>>,
     /// Message handler callback
     message_handler: Option<Box<dyn Fn(SyncMessage) + Send + Sync>>,
+    /// Background task handles
+    _send_task: Option<tokio::task::JoinHandle<()>>,
+    _receive_task: Option<tokio::task::JoinHandle<()>>,
 }
 
 /// Client configuration
@@ -90,6 +93,8 @@ impl SyncClient {
             locked_entities: Arc::new(RwLock::new(HashSet::new())),
             pending_ops: Arc::new(Mutex::new(Vec::new())),
             message_handler: None,
+            _send_task: None,
+            _receive_task: None,
         }
     }
 
@@ -154,7 +159,7 @@ impl SyncClient {
         write.send(Message::Text(hello_text)).await?;
 
         // Spawn send task
-        let send_task = tokio::spawn(async move {
+        self._send_task = Some(tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 let text = match serde_json::to_string(&msg) {
                     Ok(t) => t,
@@ -167,10 +172,10 @@ impl SyncClient {
                     break;
                 }
             }
-        });
+        }));
 
         // Spawn receive task
-        let receive_task = tokio::spawn(async move {
+        self._receive_task = Some(tokio::spawn(async move {
             while let Some(msg) = read.next().await {
                 match msg {
                     Ok(Message::Text(text)) => {
@@ -206,7 +211,7 @@ impl SyncClient {
 
             // Connection lost
             *state.write().await = ConnectionState::Disconnected;
-        });
+        }));
 
         *self.state.write().await = ConnectionState::Connected;
         tracing::info!("Connected to sync server");
@@ -216,6 +221,13 @@ impl SyncClient {
 
     /// Disconnect from server
     pub async fn disconnect(&mut self) {
+        // Abort background tasks
+        if let Some(task) = self._send_task.take() {
+            task.abort();
+        }
+        if let Some(task) = self._receive_task.take() {
+            task.abort();
+        }
         self.connection = None;
         self.tx = None;
         *self.state.write().await = ConnectionState::Disconnected;
@@ -329,10 +341,10 @@ impl SyncClient {
     async fn handle_incoming(
         client_id: Uuid,
         msg: SyncMessage,
-        state: &Arc<RwLock<ConnectionState>>,
+        _state: &Arc<RwLock<ConnectionState>>,
         collaborators: &Arc<RwLock<HashMap<Uuid, UserPresence>>>,
         locked_entities: &Arc<RwLock<HashSet<Entity>>>,
-        pending_ops: &Arc<Mutex<Vec<SyncMessage>>>,
+        _pending_ops: &Arc<Mutex<Vec<SyncMessage>>>,
         handler: Option<&Box<dyn Fn(SyncMessage) + Send + Sync>>,
     ) {
         // Call user handler if set

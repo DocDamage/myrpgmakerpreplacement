@@ -174,7 +174,7 @@ impl VisualScriptEditor {
             self.script_name = stem.to_string_lossy().to_string();
         }
         
-        self.log_success(&format!("Opened script from {:?}", path));
+        self.log_success(format!("Opened script from {:?}", path));
         Ok(())
     }
 
@@ -194,7 +194,7 @@ impl VisualScriptEditor {
         self.file_path = Some(path.clone());
         self.dirty = false;
         
-        self.log_success(&format!("Saved script to {:?}", path));
+        self.log_success(format!("Saved script to {:?}", path));
         Ok(())
     }
 
@@ -213,14 +213,14 @@ impl VisualScriptEditor {
                 }
                 
                 self.last_compile_result = Some(Ok(script));
-                self.log_success(&format!(
+                self.log_success(format!(
                     "Compilation successful: {} events, {} warnings",
                     event_count, warning_count
                 ));
             }
             Err(e) => {
                 self.last_compile_result = Some(Err(e.to_string()));
-                self.log_error(&format!("Compilation failed: {}", e));
+                self.log_error(format!("Compilation failed: {}", e));
             }
         }
         
@@ -363,7 +363,7 @@ impl VisualScriptEditor {
                 ui.separator();
                 if ui.button("Save").clicked() {
                     if let Err(e) = self.save_script(None::<&std::path::Path>) {
-                        self.log_error(&format!("Save failed: {}", e));
+                        self.log_error(format!("Save failed: {}", e));
                     }
                     ui.close_menu();
                 }
@@ -377,9 +377,9 @@ impl VisualScriptEditor {
                     match self.export_to_lua() {
                         Ok(lua) => {
                             // Would show save dialog for Lua
-                            self.log_info(&format!("Generated {} bytes of Lua", lua.len()));
+                            self.log_info(format!("Generated {} bytes of Lua", lua.len()));
                         }
-                        Err(e) => self.log_error(&format!("Export failed: {}", e)),
+                        Err(e) => self.log_error(format!("Export failed: {}", e)),
                     }
                     ui.close_menu();
                 }
@@ -440,7 +440,7 @@ impl VisualScriptEditor {
             }
             if ui.button("💾 Save").clicked() {
                 if let Err(e) = self.save_script(None::<&std::path::Path>) {
-                    self.log_error(&format!("Save failed: {}", e));
+                    self.log_error(format!("Save failed: {}", e));
                 }
             }
             
@@ -540,7 +540,7 @@ impl VisualScriptEditor {
                                 let node = node_type.create_node(canvas_center);
                                 self.canvas.graph_mut().add_node(node);
                                 self.dirty = true;
-                                self.log_info(&format!("Added {} node", node_type.name));
+                                self.log_info(format!("Added {} node", node_type.name));
                             }
                         }
                     },

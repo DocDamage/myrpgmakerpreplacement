@@ -597,13 +597,10 @@ impl TimelineEditor {
     /// Handle drag interactions
     fn handle_drag(&mut self, ui: &egui::Ui) {
         // Process drag state
-        match &self.drag_state {
-            Some(DragState::Playhead { .. }) => {
-                if !ui.input(|i| i.pointer.primary_down()) {
-                    self.drag_state = None;
-                }
+        if let Some(DragState::Playhead { .. }) = &self.drag_state {
+            if !ui.input(|i| i.pointer.primary_down()) {
+                self.drag_state = None;
             }
-            _ => {}
         }
     }
 
@@ -673,7 +670,7 @@ impl TimelineEditor {
             
             if self.playhead > self.duration {
                 if self.loop_playback {
-                    self.playhead = self.playhead % self.duration;
+                    self.playhead %= self.duration;
                 } else {
                     self.playhead = self.duration;
                     self.playing = false;

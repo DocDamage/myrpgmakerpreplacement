@@ -487,11 +487,10 @@ impl ActiveQuest {
             self.stage = QuestStage::InProgress;
         } else if completed_count < total_count {
             self.stage = QuestStage::AlmostComplete;
-        } else if completed_count == total_count {
-            if self.stage != QuestStage::ReadyForTurnIn {
+        } else if completed_count == total_count
+            && self.stage != QuestStage::ReadyForTurnIn {
                 self.stage = QuestStage::ReadyForTurnIn;
             }
-        }
     }
 }
 

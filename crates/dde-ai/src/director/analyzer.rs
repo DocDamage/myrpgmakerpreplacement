@@ -37,7 +37,7 @@ impl WorldAnalyzer {
         // Get player components
         let player_pos = world.get::<&Position>(player).ok().map(|p| *p);
         let player_stats = world.get::<&Stats>(player).ok().map(|s| *s);
-        let player_inventory = world.get::<&Inventory>(player).ok().map(|i| i.clone());
+        let player_inventory = world.get::<&Inventory>(player).ok();
         let player_map = world.get::<&MapId>(player).ok().map(|m| *m);
 
         // Calculate player location

@@ -26,9 +26,9 @@ pub fn export_to_events(timeline: &TimelineEditor) -> Vec<CutsceneEvent> {
     events.sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap());
 
     // Optimize: combine adjacent identical values
-    let events = optimize_events(events);
+    
 
-    events
+    optimize_events(events)
 }
 
 /// Export a single track to events
@@ -95,68 +95,65 @@ fn export_camera_track(track: &Track) -> Vec<CutsceneEvent> {
         let curr = &keyframes[i];
         let duration = curr.time - prev.time;
 
-        match (&prev.value, &curr.value) {
-            (TrackValue::Camera(prev_cam), TrackValue::Camera(curr_cam)) => {
-                // Camera movement
-                if prev_cam.position != curr_cam.position {
-                    events.push(CutsceneEvent {
-                        time: prev.time,
-                        event_type: CutsceneEventType::CameraMove {
-                            position: curr_cam.position,
-                            duration,
-                            easing: curr.easing,
-                        },
-                    });
-                }
-
-                // Zoom change
-                if (prev_cam.zoom - curr_cam.zoom).abs() > f32::EPSILON {
-                    events.push(CutsceneEvent {
-                        time: prev.time,
-                        event_type: CutsceneEventType::CameraZoom {
-                            target: curr_cam.zoom,
-                            duration,
-                            easing: curr.easing,
-                        },
-                    });
-                }
-
-                // Rotation change
-                if (prev_cam.rotation - curr_cam.rotation).abs() > f32::EPSILON {
-                    events.push(CutsceneEvent {
-                        time: prev.time,
-                        event_type: CutsceneEventType::CameraRotate {
-                            target: curr_cam.rotation,
-                    duration,
-                            easing: curr.easing,
-                        },
-                    });
-                }
-
-                // Shake
-                if curr_cam.shake_amount > 0.0 && prev_cam.shake_amount != curr_cam.shake_amount {
-                    events.push(CutsceneEvent {
-                        time: curr.time,
-                        event_type: CutsceneEventType::CameraShake {
-                            amount: curr_cam.shake_amount,
-                            duration: 0.5, // Default shake duration
-                        },
-                    });
-                }
-
-                // Fade
-                if (prev_cam.fade_alpha - curr_cam.fade_alpha).abs() > f32::EPSILON {
-                    events.push(CutsceneEvent {
-                        time: prev.time,
-                        event_type: CutsceneEventType::ScreenFade {
-                            target_alpha: curr_cam.fade_alpha,
-                            duration,
-                            color: [0.0, 0.0, 0.0],
-                        },
-                    });
-                }
+        if let (TrackValue::Camera(prev_cam), TrackValue::Camera(curr_cam)) = (&prev.value, &curr.value) {
+            // Camera movement
+            if prev_cam.position != curr_cam.position {
+                events.push(CutsceneEvent {
+                    time: prev.time,
+                    event_type: CutsceneEventType::CameraMove {
+                        position: curr_cam.position,
+                        duration,
+                        easing: curr.easing,
+                    },
+                });
             }
-            _ => {}
+
+            // Zoom change
+            if (prev_cam.zoom - curr_cam.zoom).abs() > f32::EPSILON {
+                events.push(CutsceneEvent {
+                    time: prev.time,
+                    event_type: CutsceneEventType::CameraZoom {
+                        target: curr_cam.zoom,
+                        duration,
+                        easing: curr.easing,
+                    },
+                });
+            }
+
+            // Rotation change
+            if (prev_cam.rotation - curr_cam.rotation).abs() > f32::EPSILON {
+                events.push(CutsceneEvent {
+                    time: prev.time,
+                    event_type: CutsceneEventType::CameraRotate {
+                        target: curr_cam.rotation,
+                duration,
+                        easing: curr.easing,
+                    },
+                });
+            }
+
+            // Shake
+            if curr_cam.shake_amount > 0.0 && prev_cam.shake_amount != curr_cam.shake_amount {
+                events.push(CutsceneEvent {
+                    time: curr.time,
+                    event_type: CutsceneEventType::CameraShake {
+                        amount: curr_cam.shake_amount,
+                        duration: 0.5, // Default shake duration
+                    },
+                });
+            }
+
+            // Fade
+            if (prev_cam.fade_alpha - curr_cam.fade_alpha).abs() > f32::EPSILON {
+                events.push(CutsceneEvent {
+                    time: prev.time,
+                    event_type: CutsceneEventType::ScreenFade {
+                        target_alpha: curr_cam.fade_alpha,
+                        duration,
+                        color: [0.0, 0.0, 0.0],
+                    },
+                });
+            }
         }
     }
 
@@ -200,55 +197,52 @@ fn export_entity_track(track: &Track) -> Vec<CutsceneEvent> {
         let curr = &keyframes[i];
         let duration = curr.time - prev.time;
 
-        match (&prev.value, &curr.value) {
-            (TrackValue::Entity(prev_ent), TrackValue::Entity(curr_ent)) => {
-                // Movement
-                if prev_ent.position != curr_ent.position {
-                    events.push(CutsceneEvent {
-                        time: prev.time,
-                        event_type: CutsceneEventType::EntityMove {
-                            entity,
-                            position: curr_ent.position,
-                            duration,
-                            easing: curr.easing,
-                        },
-                    });
-                }
-
-                // Direction change
-                if prev_ent.direction != curr_ent.direction {
-                    events.push(CutsceneEvent {
-                        time: curr.time,
-                        event_type: CutsceneEventType::EntitySetDirection {
-                            entity,
-                            direction: curr_ent.direction,
-                        },
-                    });
-                }
-
-                // Visibility change
-                if prev_ent.visible != curr_ent.visible {
-                    events.push(CutsceneEvent {
-                        time: curr.time,
-                        event_type: CutsceneEventType::EntitySetVisibility {
-                            entity,
-                            visible: curr_ent.visible,
-                        },
-                    });
-                }
-
-                // Animation change
-                if curr_ent.animation_id.is_some() && prev_ent.animation_id != curr_ent.animation_id {
-                    events.push(CutsceneEvent {
-                        time: curr.time,
-                        event_type: CutsceneEventType::PlayAnimation {
-                            entity,
-                            anim_id: curr_ent.animation_id.unwrap(),
-                        },
-                    });
-                }
+        if let (TrackValue::Entity(prev_ent), TrackValue::Entity(curr_ent)) = (&prev.value, &curr.value) {
+            // Movement
+            if prev_ent.position != curr_ent.position {
+                events.push(CutsceneEvent {
+                    time: prev.time,
+                    event_type: CutsceneEventType::EntityMove {
+                        entity,
+                        position: curr_ent.position,
+                        duration,
+                        easing: curr.easing,
+                    },
+                });
             }
-            _ => {}
+
+            // Direction change
+            if prev_ent.direction != curr_ent.direction {
+                events.push(CutsceneEvent {
+                    time: curr.time,
+                    event_type: CutsceneEventType::EntitySetDirection {
+                        entity,
+                        direction: curr_ent.direction,
+                    },
+                });
+            }
+
+            // Visibility change
+            if prev_ent.visible != curr_ent.visible {
+                events.push(CutsceneEvent {
+                    time: curr.time,
+                    event_type: CutsceneEventType::EntitySetVisibility {
+                        entity,
+                        visible: curr_ent.visible,
+                    },
+                });
+            }
+
+            // Animation change
+            if curr_ent.animation_id.is_some() && prev_ent.animation_id != curr_ent.animation_id {
+                events.push(CutsceneEvent {
+                    time: curr.time,
+                    event_type: CutsceneEventType::PlayAnimation {
+                        entity,
+                        anim_id: curr_ent.animation_id.unwrap(),
+                    },
+                });
+            }
         }
     }
 
@@ -303,22 +297,19 @@ fn export_effect_track(track: &Track) -> Vec<CutsceneEvent> {
         let prev = &keyframes[i - 1];
         let curr = &keyframes[i];
 
-        match (&prev.value, &curr.value) {
-            (TrackValue::Effect(prev_eff), TrackValue::Effect(curr_eff)) => {
-                // Effect type or intensity changed
-                if prev_eff.effect_type != curr_eff.effect_type ||
-                   (prev_eff.intensity - curr_eff.intensity).abs() > f32::EPSILON {
-                    events.push(CutsceneEvent {
-                        time: curr.time,
-                        event_type: CutsceneEventType::ScreenEffect {
-                            effect: curr_eff.effect_type,
-                            intensity: curr_eff.intensity,
-                            color: curr_eff.color,
-                        },
-                    });
-                }
+        if let (TrackValue::Effect(prev_eff), TrackValue::Effect(curr_eff)) = (&prev.value, &curr.value) {
+            // Effect type or intensity changed
+            if prev_eff.effect_type != curr_eff.effect_type ||
+               (prev_eff.intensity - curr_eff.intensity).abs() > f32::EPSILON {
+                events.push(CutsceneEvent {
+                    time: curr.time,
+                    event_type: CutsceneEventType::ScreenEffect {
+                        effect: curr_eff.effect_type,
+                        intensity: curr_eff.intensity,
+                        color: curr_eff.color,
+                    },
+                });
             }
-            _ => {}
         }
     }
 

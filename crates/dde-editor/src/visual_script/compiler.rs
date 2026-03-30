@@ -265,7 +265,7 @@ impl<'a> Compiler<'a> {
         self.visiting.insert(node_id);
 
         let node = self.graph.nodes.get(&node_id)
-            .ok_or_else(|| CompileError::OrphanedNode(node_id))?
+            .ok_or(CompileError::OrphanedNode(node_id))?
             .clone();
 
         // Mark as visited
@@ -452,28 +452,28 @@ impl<'a> Compiler<'a> {
             NodeType::Continue => Ok(GameEvent::Continue),
 
             // Condition nodes - compile as condition expressions
-            NodeType::HasItem { item_id, quantity } => {
+            NodeType::HasItem { item_id: _, quantity: _ } => {
                 // This should be used in a Branch node context
                 Err(CompileError::UnsupportedNodeType(
                     "HasItem must be connected to Branch condition pin".to_string()
                 ))
             }
-            NodeType::StatCheck { stat, operator, value } => {
+            NodeType::StatCheck { stat: _, operator: _, value: _ } => {
                 Err(CompileError::UnsupportedNodeType(
                     "StatCheck must be connected to Branch condition pin".to_string()
                 ))
             }
-            NodeType::QuestStage { quest_id, stage } => {
+            NodeType::QuestStage { quest_id: _, stage: _ } => {
                 Err(CompileError::UnsupportedNodeType(
                     "QuestStage must be connected to Branch condition pin".to_string()
                 ))
             }
-            NodeType::TimeOfDay { min_hour, max_hour } => {
+            NodeType::TimeOfDay { min_hour: _, max_hour: _ } => {
                 Err(CompileError::UnsupportedNodeType(
                     "TimeOfDay must be connected to Branch condition pin".to_string()
                 ))
             }
-            NodeType::RandomChance { percent } => {
+            NodeType::RandomChance { percent: _ } => {
                 Err(CompileError::UnsupportedNodeType(
                     "RandomChance must be connected to Branch condition pin".to_string()
                 ))
@@ -483,7 +483,7 @@ impl<'a> Compiler<'a> {
                     "GameFlag must be connected to Branch condition pin".to_string()
                 ))
             }
-            NodeType::Compare { left, operator, right } => {
+            NodeType::Compare { left: _, operator: _, right: _ } => {
                 Err(CompileError::UnsupportedNodeType(
                     "Compare must be connected to Branch condition pin".to_string()
                 ))
@@ -529,7 +529,7 @@ impl<'a> Compiler<'a> {
             // For a linear chain, follow the first execution output
             let conn = &connections[0];
             let next_node = self.graph.nodes.get(&conn.target_node)
-                .ok_or_else(|| CompileError::InvalidConnection(conn.target_node))?;
+                .ok_or(CompileError::InvalidConnection(conn.target_node))?;
 
             // Compile this node
             let event = self.compile_event_node(next_node.id)?;
@@ -661,12 +661,12 @@ impl<'a> Compiler<'a> {
 
     fn get_execution_output_pin(&self, node_id: NodeId) -> CompileResult<PinId> {
         let node = self.graph.nodes.get(&node_id)
-            .ok_or_else(|| CompileError::OrphanedNode(node_id))?;
+            .ok_or(CompileError::OrphanedNode(node_id))?;
 
         node.exec_outputs()
             .next()
             .map(|p| p.id)
-            .ok_or_else(|| CompileError::MissingInput(node_id))
+            .ok_or(CompileError::MissingInput(node_id))
     }
 }
 
@@ -692,7 +692,7 @@ fn convert_to_engine_event(event: &GameEvent) -> Option<EngineEvent> {
         GameEvent::Teleport { map_id, x, y } => {
             Some(EngineEvent::SubMapEntered {
                 entity: hecs::Entity::DANGLING,
-                sub_map_id: *map_id as u32,
+                sub_map_id: *map_id,
             })
         }
         GameEvent::PlaySfx { sound_id } => {

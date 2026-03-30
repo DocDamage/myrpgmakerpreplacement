@@ -515,7 +515,7 @@ impl From<BlackboardValue> for Vec3 {
 
 impl From<Entity> for BlackboardValue {
     fn from(v: Entity) -> Self {
-        Self::Entity(v.to_bits().get() as u64)
+        Self::Entity(v.to_bits().get())
     }
 }
 

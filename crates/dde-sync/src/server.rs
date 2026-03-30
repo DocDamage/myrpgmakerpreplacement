@@ -484,7 +484,7 @@ async fn handle_message(
         SyncMessage::RequestSync => {
             // Send current project state
             let state_guard = state.read().await;
-            if let Some(session) = state_guard.sessions.get(project_id) {
+            if state_guard.sessions.get(project_id).is_some() {
                 let sync_state = SyncMessage::SyncState {
                     state: crate::protocol::ProjectState {
                         project_id: project_id.to_string(),

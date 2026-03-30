@@ -113,7 +113,7 @@ impl BehaviorTreeEditor {
         ui.separator();
 
         // Main editor area
-        let available_size = ui.available_size();
+        let _available_size = ui.available_size();
         
         egui::SidePanel::right("bt_properties")
             .default_width(250.0)
@@ -769,6 +769,7 @@ impl BehaviorTreeEditor {
         self.find_parent_recursive(root, child_id)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn find_parent_recursive(&self, node: &BtNode, target_id: NodeId) -> Option<NodeId> {
         if let Some(children) = node.children() {
             for child in children {
