@@ -14,8 +14,6 @@ pub struct SyncPanel {
     status_message: Option<String>,
     /// Status timeout
     status_timeout: f32,
-    /// Last update time
-    last_update: Instant,
 }
 
 /// Sync panel tabs
@@ -58,7 +56,8 @@ pub enum SyncDirection {
 }
 
 impl SyncDirection {
-    fn name(&self) -> &'static str {
+    /// Get display name for the sync direction
+    pub fn name(&self) -> &'static str {
         match self {
             SyncDirection::EcsToDb => "ECS → Database",
             SyncDirection::DbToEcs => "Database → ECS",
@@ -78,7 +77,8 @@ pub enum ConflictStrategy {
 }
 
 impl ConflictStrategy {
-    fn name(&self) -> &'static str {
+    /// Get display name for the conflict strategy
+    pub fn name(&self) -> &'static str {
         match self {
             ConflictStrategy::DatabaseWins => "Database Wins",
             ConflictStrategy::EcsWins => "ECS Wins",
@@ -119,7 +119,6 @@ impl SyncPanel {
             selected_tab: SyncTab::Status,
             status_message: None,
             status_timeout: 0.0,
-            last_update: Instant::now(),
         }
     }
 

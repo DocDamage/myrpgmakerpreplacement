@@ -219,6 +219,18 @@ impl ChangeTracker {
         self.pending_changes.len()
     }
 
+    /// Get the timestamp of the oldest pending change
+    pub fn oldest_pending_timestamp(&self) -> Option<Instant> {
+        self.pending_changes.values().map(|c| c.timestamp).min()
+    }
+
+    /// Check if there are stale changes older than the given duration
+    pub fn has_stale_changes(&self, max_age: std::time::Duration) -> bool {
+        self.oldest_pending_timestamp()
+            .map(|ts| ts.elapsed() > max_age)
+            .unwrap_or(false)
+    }
+
     /// Check if there are pending changes
     pub fn has_pending(&self) -> bool {
         !self.pending_changes.is_empty()

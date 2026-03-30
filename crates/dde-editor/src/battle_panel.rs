@@ -8,8 +8,6 @@ pub struct BattlePanel {
     visible: bool,
     /// Selected tab
     selected_tab: BattleTab,
-    /// Battle state
-    battle_active: bool,
     /// Test entity count
     test_entity_count: usize,
     /// Selected formation layout
@@ -84,7 +82,6 @@ impl BattlePanel {
         Self {
             visible: false,
             selected_tab: BattleTab::Setup,
-            battle_active: false,
             test_entity_count: 2,
             formation_layout: FormationLayout::Balanced,
         }

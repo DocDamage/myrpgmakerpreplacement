@@ -116,8 +116,6 @@ pub struct EcsSyncLayer {
     entity_mapper: EntityMapper,
     /// Change tracker
     change_tracker: ChangeTracker,
-    /// Conflict resolver
-    conflict_resolver: ConflictResolver,
     /// Configuration
     config: SyncConfig,
     /// Statistics
@@ -141,7 +139,6 @@ impl EcsSyncLayer {
         Self {
             entity_mapper: EntityMapper::new(),
             change_tracker: ChangeTracker::new(),
-            conflict_resolver: ConflictResolver::new(config.conflict_strategy),
             config,
             stats: SyncStats::default(),
             last_auto_sync: Instant::now(),
