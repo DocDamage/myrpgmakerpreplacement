@@ -12,6 +12,7 @@ dde-db = { path = "../dde-db" }
 
 # Async
 tokio = { workspace = true }
+async-trait = "0.1"
 
 # HTTP
 reqwest = { workspace = true }
@@ -19,6 +20,9 @@ reqwest = { workspace = true }
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+# Time
+chrono = { workspace = true }
 
 # Error handling
 thiserror = { workspace = true }

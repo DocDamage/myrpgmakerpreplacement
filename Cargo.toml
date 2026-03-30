@@ -18,6 +18,9 @@ members = [
     "crates/dde-audio",
     "crates/dde-ai",
     "crates/dde-export",
+    "crates/dde-asset-forge",
+    "crates/dde-lua",
+    "crates/dde-sync",
 ]
 resolver = "2"
 
@@ -30,7 +33,7 @@ license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 # Core ECS and concurrency
-hecs = "0.10"
+hecs = { version = "0.10", features = ["serde"] }
 crossbeam-channel = "0.5"
 parking_lot = "0.12"
 
@@ -67,10 +70,10 @@ kira = "0.9"
 midir = "0.10"
 
 # Scripting
-mlua = { version = "0.10", features = ["lua54", "vendored", "serialize"] }
+mlua = { version = "0.10", features = ["lua54", "vendored", "serialize", "send"] }
 
 # Image processing
-image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 
 # Error handling and logging
 thiserror = "1.0"
@@ -102,6 +105,8 @@ dde-battle = { path = "crates/dde-battle" }
 dde-audio = { path = "crates/dde-audio" }
 dde-ai = { path = "crates/dde-ai" }
 dde-export = { path = "crates/dde-export" }
+dde-asset-forge = { path = "crates/dde-asset-forge" }
+dde-sync = { path = "crates/dde-sync" }
 
 # Main binary dependencies
 tokio = { workspace = true }
@@ -112,6 +117,17 @@ winit = { workspace = true }
 wgpu = { workspace = true }
 glam = { workspace = true }
 pollster = "0.4"
+dirs = "5.0"
+egui = { workspace = true }
+hecs = { workspace = true }
+open = "5"
+
+[features]
+default = ["audio", "embedded-server"]
+audio = ["dde-battle/audio"]
+ui = ["dde-battle/ui", "dde-db/egui"]
+webview = ["dde-asset-forge/webview"]
+embedded-server = ["dde-asset-forge/embedded-server"]
 
 [[bin]]
 name = "dde"
@@ -127,5 +143,13 @@ strip = true
 [profile.dev]
 opt-level = 1
 incremental = true
+
+# WASM target support - optimize for size
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"          # Optimize for size
+lto = true               # Full link-time optimization
+strip = true             # Strip symbols
+panic = "abort"          # Smaller panic handling
 
 [dev-dependencies]

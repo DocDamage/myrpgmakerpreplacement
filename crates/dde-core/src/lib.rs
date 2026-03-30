@@ -1,12 +1,35 @@
 //! DocDamage Engine - Core Library
-//! 
+//!
 //! This crate provides the foundational ECS architecture, simulation loop,
 //! event bus, and core game logic for the DocDamage Engine.
 
+pub mod ai;
 pub mod components;
 pub mod events;
+pub mod particles;
+pub mod pathfinding;
+pub mod platform;
+pub mod profiler;
+pub mod replay;
 pub mod resources;
+pub mod serialization;
 pub mod systems;
+pub mod vibecode;
+
+// Re-export vibecode types
+pub use vibecode::{Dialogue, Identity, Memory, Mood, Trigger, Vibecode, VibecodeError};
+
+// Re-export serialization types
+pub use serialization::{
+    EntitySerializer, GameSave, SerializedEntity, WorldSerializer, WorldSnapshot,
+};
+
+// Re-export replay types
+pub use replay::{
+    verify_replay, BattleInput, Checkpoint, CheckpointSystem, PlayerInput, Replay, ReplayError,
+    ReplayGameLoop, ReplayMetadata, ReplayPlayer, ReplayRecorder, ReplayResult, ReplayState,
+    TickInputs, VerificationData, REPLAY_FILE_EXTENSION, REPLAY_VERSION,
+};
 
 use std::time::Duration;
 
@@ -33,22 +56,24 @@ pub type Result<T> = std::result::Result<T, CoreError>;
 pub enum CoreError {
     #[error("ECS error: {0}")]
     Ecs(#[from] hecs::ComponentError),
-    
+
     #[error("Entity not found: {0:?}")]
     EntityNotFound(Entity),
-    
+
     #[error("Invalid state transition: {from} -> {to}")]
     InvalidStateTransition { from: String, to: String },
-    
+
     #[error("Simulation error: {0}")]
     Simulation(String),
-    
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }
 
 /// Direction enum for 4-way movement
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 pub enum Direction4 {
     #[default]
     Down = 0,
@@ -67,7 +92,7 @@ impl Direction4 {
             Direction4::Right => Direction4::Left,
         }
     }
-    
+
     /// Convert to a vector
     pub fn to_vec2(self) -> glam::Vec2 {
         match self {
@@ -80,7 +105,9 @@ impl Direction4 {
 }
 
 /// World state for tiles/areas
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 pub enum WorldState {
     #[default]
     Balance = 0,
@@ -195,9 +222,17 @@ pub enum InputAction {
 /// Transition kinds between game states
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TransitionKind {
-    Fade { color: [f32; 3], duration_ms: u32 },
-    Wipe { direction: WipeDirection, duration_ms: u32 },
-    BattleSwirl { duration_ms: u32 },
+    Fade {
+        color: [f32; 3],
+        duration_ms: u32,
+    },
+    Wipe {
+        direction: WipeDirection,
+        duration_ms: u32,
+    },
+    BattleSwirl {
+        duration_ms: u32,
+    },
     Instant,
 }
 

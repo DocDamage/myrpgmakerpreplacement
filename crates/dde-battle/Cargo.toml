@@ -10,8 +10,27 @@ license.workspace = true
 dde-core = { path = "../dde-core" }
 dde-render = { path = "../dde-render" }
 dde-db = { path = "../dde-db" }
-dde-audio = { path = "../dde-audio" }
+dde-audio = { path = "../dde-audio", optional = true }
+
+# UI (optional)
+egui = { workspace = true, optional = true }
+
+# Random
+rand = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 # Error handling
 thiserror = { workspace = true }
 tracing = { workspace = true }
+
+[features]
+default = ["audio"]
+audio = ["dep:dde-audio"]
+ui = ["dep:egui"]
+
+[[example]]
+name = "inventory_ui_example"
+required-features = ["ui"]

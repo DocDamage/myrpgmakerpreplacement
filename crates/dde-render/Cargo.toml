@@ -14,6 +14,10 @@ dde-db = { path = "../dde-db" }
 wgpu = { workspace = true }
 winit = { workspace = true }
 
+# UI
+egui = { workspace = true }
+egui-wgpu = { workspace = true }
+
 # Window
 raw-window-handle = { workspace = true }
 
@@ -31,3 +35,9 @@ image = { workspace = true }
 
 # Async
 pollster = "0.4"
+
+# File watching
+notify = "6.0"
+
+[dev-dependencies]
+tempfile = "3"

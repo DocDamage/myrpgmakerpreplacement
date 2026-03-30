@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
-use rand::SeedableRng;
 use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 /// Simulation time tracking
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -19,11 +19,11 @@ pub struct SimTime {
 impl SimTime {
     /// Ticks per in-game hour
     pub const TICKS_PER_HOUR: u64 = 600; // 10 minutes of real time = 1 game hour
-    
+
     /// Advance by one tick
     pub fn tick(&mut self) {
         self.tick_count += 1;
-        
+
         // Update in-game time
         if self.tick_count % Self::TICKS_PER_HOUR == 0 {
             self.hour += 1;
@@ -69,19 +69,19 @@ impl SimStat {
             decay_rate: 0.0,
         }
     }
-    
+
     pub fn with_decay(mut self, rate: f64) -> Self {
         self.decay_rate = rate;
         self
     }
-    
+
     /// Set raw value and update normalized
     pub fn set_raw(&mut self, value: f64) {
         self.raw_value = value.clamp(self.min_value, self.max_value);
         self.value = (self.raw_value - self.min_value) / (self.max_value - self.min_value);
         self.display_value = format!("{:.1}", self.raw_value);
     }
-    
+
     /// Apply decay
     pub fn tick(&mut self) {
         if self.decay_rate != 0.0 {
@@ -96,43 +96,49 @@ pub struct RngPool {
     sim: StdRng,
     battle: StdRng,
     loot: StdRng,
+    seed: u64,
 }
 
 impl RngPool {
     /// Salt values for forked RNGs
-    const SIM_SALT: u64 = 0x53494D5F53414C54; // "SIM_SALT"
-    const BATTLE_SALT: u64 = 0x4241545F53414C54; // "BAT_SALT"
-    const LOOT_SALT: u64 = 0x4C4F4F5453414C54; // "LOOTSALT"
-    
+    const SIM_SALT: u64 = 0x5349_4D5F_5341_4C54; // "SIM_SALT"
+    const BATTLE_SALT: u64 = 0x4241_545F_5341_4C54; // "BAT_SALT"
+    const LOOT_SALT: u64 = 0x4C4F_4F54_5341_4C54; // "LOOTSALT"
+
     /// Create new RNG pool from seed
     pub fn from_seed(seed: u64) -> Self {
         let master = StdRng::seed_from_u64(seed);
         let sim = StdRng::seed_from_u64(seed ^ Self::SIM_SALT);
         let battle = StdRng::seed_from_u64(seed ^ Self::BATTLE_SALT);
         let loot = StdRng::seed_from_u64(seed ^ Self::LOOT_SALT);
-        
+
         Self {
             master,
             sim,
             battle,
             loot,
+            seed,
         }
     }
-    
+
     pub fn master(&mut self) -> &mut StdRng {
         &mut self.master
     }
-    
+
     pub fn sim(&mut self) -> &mut StdRng {
         &mut self.sim
     }
-    
+
     pub fn battle(&mut self) -> &mut StdRng {
         &mut self.battle
     }
-    
+
     pub fn loot(&mut self) -> &mut StdRng {
         &mut self.loot
+    }
+
+    pub fn seed(&self) -> u64 {
+        self.seed
     }
 }
 
@@ -189,15 +195,15 @@ impl InputState {
         self.mouse_released = [false; 3];
         self.scroll_delta = 0.0;
     }
-    
+
     pub fn is_held(&self, action: &str) -> bool {
         self.held.contains(action)
     }
-    
+
     pub fn is_pressed(&self, action: &str) -> bool {
         self.pressed.contains(action)
     }
-    
+
     pub fn is_released(&self, action: &str) -> bool {
         self.released.contains(action)
     }

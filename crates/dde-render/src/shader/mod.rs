@@ -55,7 +55,7 @@ impl ShaderModule {
             label: Some(label),
             source: wgpu::ShaderSource::Wgsl(source.into()),
         });
-        
+
         Self { module }
     }
 }

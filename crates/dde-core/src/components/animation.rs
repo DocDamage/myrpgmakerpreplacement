@@ -90,11 +90,13 @@ pub struct AnimationDef {
 
 impl AnimationDef {
     /// Get total duration of one loop
+    #[must_use]
     pub fn total_duration_ms(&self) -> u32 {
         self.durations_ms.iter().sum()
     }
-    
+
     /// Get duration for a specific frame
+    #[must_use]
     pub fn frame_duration_ms(&self, frame_index: usize) -> u32 {
         self.durations_ms.get(frame_index).copied().unwrap_or(100)
     }

@@ -33,12 +33,12 @@ impl Vertex {
             },
         ],
     };
-    
-    pub fn new(x: f32, y: f32, z: f32, u: f32, v: f32, r: f32, g: f32, b: f32, a: f32) -> Self {
+
+    pub fn new(position: [f32; 3], tex_coords: [f32; 2], color: [f32; 4]) -> Self {
         Self {
-            position: [x, y, z],
-            tex_coords: [u, v],
-            color: [r, g, b, a],
+            position,
+            tex_coords,
+            color,
         }
     }
 }
@@ -52,14 +52,18 @@ pub struct Quad {
 impl Quad {
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
         let vertices = vec![
-            Vertex::new(x, y, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),
-            Vertex::new(x + width, y, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0),
-            Vertex::new(x + width, y + height, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
-            Vertex::new(x, y + height, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+            Vertex::new([x, y, 0.0], [0.0, 0.0], [1.0, 1.0, 1.0, 1.0]),
+            Vertex::new([x + width, y, 0.0], [1.0, 0.0], [1.0, 1.0, 1.0, 1.0]),
+            Vertex::new(
+                [x + width, y + height, 0.0],
+                [1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+            ),
+            Vertex::new([x, y + height, 0.0], [0.0, 1.0], [1.0, 1.0, 1.0, 1.0]),
         ];
-        
+
         let indices = vec![0, 1, 2, 0, 2, 3];
-        
+
         Self { vertices, indices }
     }
 }

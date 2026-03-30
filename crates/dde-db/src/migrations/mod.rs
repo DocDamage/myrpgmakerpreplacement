@@ -1,13 +1,18 @@
 //! Database Migrations
-//! 
+//!
 //! Manages schema versioning and migrations for the SQLite database.
 
 use rusqlite::Connection;
 
 use crate::Result;
 
+pub mod v2_asset_os;
+pub mod v3_screenshots;
+pub mod v4_visual_scripts;
+pub mod v4_cutscenes;
+
 /// Current schema version
-pub const CURRENT_SCHEMA_VERSION: i32 = 1;
+pub const CURRENT_SCHEMA_VERSION: i32 = 5;
 
 /// Run all pending migrations
 pub fn run_migrations(conn: &Connection) -> Result<()> {
@@ -19,22 +24,40 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         )",
         [],
     )?;
-    
+
     // Get current version
     let current_version: i32 = conn
-        .query_row(
-            "SELECT MAX(version) FROM _migrations",
-            [],
-            |row| row.get::<_, Option<i32>>(0).map(|v| v.unwrap_or(0)),
-        )
+        .query_row("SELECT MAX(version) FROM _migrations", [], |row| {
+            row.get::<_, Option<i32>>(0).map(|v| v.unwrap_or(0))
+        })
         .unwrap_or(0);
-    
+
     // Apply pending migrations
     if current_version < 1 {
         migration_v1_initial_schema(conn)?;
         record_migration(conn, 1)?;
     }
-    
+
+    if current_version < 2 {
+        v2_asset_os::apply(conn)?;
+        record_migration(conn, 2)?;
+    }
+
+    if current_version < 3 {
+        v3_screenshots::apply(conn)?;
+        record_migration(conn, 3)?;
+    }
+
+    if current_version < 4 {
+        v4_cutscenes::apply(conn)?;
+        record_migration(conn, 4)?;
+    }
+
+    if current_version < 5 {
+        v4_visual_scripts::apply(conn)?;
+        record_migration(conn, 5)?;
+    }
+
     tracing::info!("Database schema at version {}", CURRENT_SCHEMA_VERSION);
     Ok(())
 }
@@ -52,7 +75,7 @@ fn record_migration(conn: &Connection, version: i32) -> Result<()> {
 /// Initial schema v1 - creates all tables from the blueprint
 fn migration_v1_initial_schema(conn: &Connection) -> Result<()> {
     tracing::info!("Applying migration v1: Initial schema");
-    
+
     conn.execute_batch(V1_SCHEMA)?;
     Ok(())
 }
@@ -429,6 +452,16 @@ CREATE TABLE IF NOT EXISTS scripts (
     source TEXT NOT NULL,
     attachment_type TEXT NOT NULL DEFAULT 'event',
     updated_at INTEGER NOT NULL
+);
+
+-- =====================================================
+-- SAVE SLOTS (for player save games)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS save_slots (
+    slot_number INTEGER PRIMARY KEY,
+    saved_at INTEGER NOT NULL,
+    play_time_ms INTEGER NOT NULL DEFAULT 0,
+    screenshot_data BLOB
 );
 
 -- =====================================================

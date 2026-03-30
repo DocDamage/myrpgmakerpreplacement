@@ -1,5 +1,5 @@
 //! ECS Components
-//! 
+//!
 //! Components are plain data structs attached to entities.
 //! No methods, no behavior - just data.
 
@@ -27,11 +27,11 @@ impl Position {
     pub fn new(x: i32, y: i32, z: i32) -> Self {
         Self { x, y, z }
     }
-    
+
     pub fn to_ivec3(self) -> IVec3 {
         IVec3::new(self.x, self.y, self.z)
     }
-    
+
     pub fn distance_squared(self, other: Position) -> i32 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
@@ -50,7 +50,7 @@ impl SubPosition {
     pub fn new(px: f32, py: f32) -> Self {
         Self { px, py }
     }
-    
+
     pub fn to_vec2(self) -> Vec2 {
         Vec2::new(self.px, self.py)
     }
@@ -146,7 +146,7 @@ impl Stats {
             self.hp as f32 / self.max_hp as f32
         }
     }
-    
+
     /// Calculate MP percentage
     pub fn mp_percent(&self) -> f32 {
         if self.max_mp == 0 {
@@ -155,17 +155,17 @@ impl Stats {
             self.mp as f32 / self.max_mp as f32
         }
     }
-    
+
     /// Check if alive
     pub fn is_alive(&self) -> bool {
         self.hp > 0
     }
-    
+
     /// Apply damage
     pub fn take_damage(&mut self, amount: i32) {
         self.hp = (self.hp - amount).max(0);
     }
-    
+
     /// Heal
     pub fn heal(&mut self, amount: i32) {
         self.hp = (self.hp + amount).min(self.max_hp);
@@ -189,7 +189,7 @@ impl Inventory {
     pub fn new() -> Self {
         Self { items: Vec::new() }
     }
-    
+
     /// Add item to inventory
     pub fn add_item(&mut self, item_id: u32, quantity: u32, max_stack: u32) {
         if let Some(slot) = self.items.iter_mut().find(|s| s.item_id == item_id) {
@@ -199,7 +199,7 @@ impl Inventory {
             self.items.push(ItemSlot { item_id, quantity });
         }
     }
-    
+
     /// Remove item from inventory
     pub fn remove_item(&mut self, item_id: u32, quantity: u32) -> bool {
         if let Some(pos) = self.items.iter().position(|s| s.item_id == item_id) {
@@ -216,7 +216,7 @@ impl Inventory {
             false
         }
     }
-    
+
     /// Get item quantity
     pub fn get_quantity(&self, item_id: u32) -> u32 {
         self.items
@@ -225,7 +225,7 @@ impl Inventory {
             .map(|s| s.quantity)
             .unwrap_or(0)
     }
-    
+
     /// Check if has item
     pub fn has_item(&self, item_id: u32, min_qty: u32) -> bool {
         self.get_quantity(item_id) >= min_qty

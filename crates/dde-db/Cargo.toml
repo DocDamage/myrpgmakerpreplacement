@@ -30,3 +30,13 @@ chrono = { workspace = true }
 
 # Utilities
 uuid = { workspace = true }
+
+# Image processing for screenshots
+image = { workspace = true }
+
+[dependencies.egui]
+workspace = true
+optional = true
+
+[features]
+egui = ["dep:egui"]

@@ -13,6 +13,10 @@ dde-db = { path = "../dde-db" }
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+toml = { workspace = true }
+
+# Time
+chrono = { workspace = true }
 
 # ZIP
 zip = "2.0"
@@ -20,4 +24,10 @@ zip = "2.0"
 # Error handling
 thiserror = { workspace = true }
 tracing = { workspace = true }
-anyhow = { workspace = true }
+
+# WASM export
+walkdir = { version = "2", optional = true }
+pulldown-cmark = { version = "0.9", optional = true }
+
+[features]
+wasm-export = ["walkdir", "pulldown-cmark"]

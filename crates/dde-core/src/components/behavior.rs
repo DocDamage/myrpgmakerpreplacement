@@ -109,7 +109,7 @@ impl MovementSpeed {
         let speed = 2.0 + (spd as f32 / 50.0);
         Self { speed }
     }
-    
+
     pub fn run_speed(&self) -> f32 {
         self.speed * 2.0
     }
@@ -134,25 +134,25 @@ impl CurrentPath {
     pub fn is_complete(&self) -> bool {
         self.current_index >= self.waypoints.len()
     }
-    
+
     pub fn next_waypoint(&self) -> Option<(i32, i32)> {
         self.waypoints.get(self.current_index).copied()
     }
-    
+
     pub fn advance(&mut self) {
         self.current_index += 1;
     }
-    
+
     pub fn clear(&mut self) {
         self.waypoints.clear();
         self.current_index = 0;
         self.failed_attempts = 0;
     }
-    
+
     pub fn record_failure(&mut self) {
         self.failed_attempts += 1;
     }
-    
+
     pub fn should_give_up(&self) -> bool {
         self.failed_attempts >= 3
     }

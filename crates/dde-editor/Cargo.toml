@@ -8,12 +8,34 @@ license.workspace = true
 
 [dependencies]
 dde-core = { path = "../dde-core" }
+dde-ai = { path = "../dde-ai" }
 dde-render = { path = "../dde-render" }
 dde-db = { path = "../dde-db" }
+dde-export = { path = "../dde-export" }
+dde-sync = { path = "../dde-sync" }
 
 # UI
 egui = { workspace = true }
 
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+
 # Error handling
 thiserror = { workspace = true }
 tracing = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Math
+glam = { workspace = true }
+
+# ECS
+hecs = { workspace = true }
+
+# Random
+rand = { workspace = true }

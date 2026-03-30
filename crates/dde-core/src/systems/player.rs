@@ -2,10 +2,10 @@
 
 use glam::Vec2;
 
-use crate::{Entity, World};
+use crate::components::behavior::MovementSpeed;
 use crate::components::{EntityKindComp, Name, Position, Stats, SubPosition};
 use crate::Direction4;
-use crate::components::behavior::MovementSpeed;
+use crate::{Entity, World};
 
 /// Player marker component
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -26,12 +26,14 @@ impl PlayerController {
             run_multiplier: 2.0,
         }
     }
-    
+
     /// Spawn player entity
     pub fn spawn_player(&mut self, world: &mut World, x: i32, y: i32) -> Entity {
         let entity = world.spawn((
             Player,
-            EntityKindComp { kind: crate::EntityKind::Player },
+            EntityKindComp {
+                kind: crate::EntityKind::Player,
+            },
             Name::new("Player", "player"),
             Position::new(x, y, 0),
             SubPosition::default(),
@@ -51,36 +53,43 @@ impl PlayerController {
             MovementSpeed::from_spd_stat(10),
             Direction4::Down,
         ));
-        
+
         self.entity = Some(entity);
         entity
     }
-    
+
     /// Get player position if exists
     pub fn position(&self, world: &World) -> Option<Position> {
-        self.entity.and_then(|e| world.query_one::<&Position>(e).ok()?.get().copied())
+        self.entity
+            .and_then(|e| world.query_one::<&Position>(e).ok()?.get().copied())
     }
-    
+
     /// Get player world position (including sub-position)
     pub fn world_position(&self, world: &World) -> Option<Vec2> {
         self.entity.and_then(|e| {
             let mut query = world.query_one::<(&Position, &SubPosition)>(e).ok()?;
             let (pos, sub) = query.get()?;
-            Some(Vec2::new(
-                pos.x as f32 + sub.px,
-                pos.y as f32 + sub.py,
-            ))
+            Some(Vec2::new(pos.x as f32 + sub.px, pos.y as f32 + sub.py))
         })
     }
-    
+
     /// Check if player exists
     pub fn exists(&self) -> bool {
         self.entity.is_some()
     }
-    
+
     /// Get player entity
     pub fn entity(&self) -> Option<Entity> {
         self.entity
+    }
+
+    /// Find player entity in the world (useful after loading)
+    pub fn find_player(&mut self, world: &World) {
+        if let Some((entity, _)) = world.query::<&Player>().iter().next() {
+            self.entity = Some(entity);
+        } else {
+            self.entity = None;
+        }
     }
 }
 

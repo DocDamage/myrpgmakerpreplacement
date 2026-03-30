@@ -1,7 +1,7 @@
 //! Render pipelines
 
 use crate::mesh::Vertex;
-use crate::shader::{DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER, ShaderModule};
+use crate::shader::{ShaderModule, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER};
 
 /// Default render pipeline
 pub struct SpritePipeline {
@@ -15,11 +15,11 @@ impl SpritePipeline {
         // Create shader modules
         let vs_module = ShaderModule::from_source(device, DEFAULT_VERTEX_SHADER, "vs_main");
         let fs_module = ShaderModule::from_source(device, DEFAULT_FRAGMENT_SHADER, "fs_main");
-        
+
         // Bind group layouts
-        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStages::VERTEX,
                     ty: wgpu::BindingType::Buffer {
@@ -28,39 +28,39 @@ impl SpritePipeline {
                         min_binding_size: None,
                     },
                     count: None,
-                },
-            ],
-            label: Some("camera_bind_group_layout"),
-        });
-        
-        let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                }],
+                label: Some("camera_bind_group_layout"),
+            });
+
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("texture_bind_group_layout"),
-        });
-        
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("texture_bind_group_layout"),
+            });
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Sprite Pipeline Layout"),
             bind_group_layouts: &[&camera_bind_group_layout, &texture_bind_group_layout],
             push_constant_ranges: &[],
         });
-        
+
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Sprite Pipeline"),
             layout: Some(&pipeline_layout),
@@ -97,7 +97,7 @@ impl SpritePipeline {
             },
             multiview: None,
         });
-        
+
         Self {
             pipeline,
             bind_group_layout: texture_bind_group_layout,

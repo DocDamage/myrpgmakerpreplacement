@@ -18,6 +18,8 @@ The engine follows a modular workspace architecture with the following crates:
 | `dde-audio` | kira-based stem mixer | ✅ Foundation complete |
 | `dde-ai` | Python FastAPI sidecar client | ✅ Foundation complete |
 | `dde-export` | MZ export, packaging | ✅ Foundation complete |
+| `dde-asset-forge` | Asset Forge integration, webview, Asset OS | ✅ Foundation complete |
+| `dde-lua` | Lua scripting with mlua, sandboxed API | ✅ Foundation complete |
 
 ## Week 1 & 2 Deliverables ✅ COMPLETE
 
@@ -178,18 +180,21 @@ cargo run
 - [ ] Quest lifecycle tracking
 - [ ] Event trigger system
 
-### Week 8: Asset Forge Integration
-- [ ] Webview embedding
-- [ ] SpriteGeneratorAdapter
-- [ ] Asset OS (inbox, staging, review queue)
-- [ ] Classification engine
+### Week 8: Asset Forge Integration ✅ COMPLETE
+- [x] Webview embedding (wry-based, external browser fallback)
+- [x] SpriteGeneratorAdapter trait with postMessage IPC
+- [x] Asset OS (inbox, staging, review queue, production)
+- [x] Classification engine (deterministic rules + confidence scoring)
+- [x] Duplicate detection (SHA-256 + perceptual hashing)
+- [x] Database schema v2 with asset pipeline tables
 
-### Week 9: Editor Linkage, Lua, Polish
-- [ ] Lua scripting with mlua
-- [ ] Particle system
-- [ ] Animation priority system
-- [ ] Pathfinding A*
-- [ ] Profiler overlay
+### Week 9: Editor Linkage, Lua, Polish ✅ COMPLETE
+- [x] Lua scripting with mlua (curated API, sandboxed)
+- [x] Particle system (rain, snow, ash, spell effects)
+- [x] Animation priority system foundation
+- [x] A* pathfinding with passability cache
+- [x] NPC patrol and schedule behaviors
+- [x] Performance profiler overlay (F11)
 
 ### Week 10: MZ Export, Packaging
 - [ ] MZ character sheet repacker
