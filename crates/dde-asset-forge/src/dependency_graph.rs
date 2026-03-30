@@ -51,7 +51,7 @@ impl AssetType {
     /// Detect asset type from file extension
     pub fn from_extension(ext: &str) -> Option<Self> {
         let ext = ext.to_lowercase();
-        for asset_type in [
+        [
             AssetType::Texture,
             AssetType::SpriteSheet,
             AssetType::Audio,
@@ -64,12 +64,7 @@ impl AssetType {
             AssetType::Shader,
             AssetType::Font,
             AssetType::Data,
-        ] {
-            if asset_type.extensions().contains(&ext.as_str()) {
-                return Some(asset_type);
-            }
-        }
-        None
+        ].into_iter().find(|&asset_type| asset_type.extensions().contains(&ext.as_str()))
     }
 }
 

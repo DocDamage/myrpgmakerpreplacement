@@ -381,12 +381,7 @@ impl SaveManager {
 
     /// Get next available save slot
     pub fn next_available_slot(&self) -> Option<u32> {
-        for slot in 1..=self.config.max_slots {
-            if !self.cache.contains_key(&slot) {
-                return Some(slot);
-            }
-        }
-        None
+        (1..=self.config.max_slots).find(|&slot| !self.cache.contains_key(&slot))
     }
 
     /// Get save directory size

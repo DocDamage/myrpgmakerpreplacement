@@ -123,7 +123,7 @@ const BLOB47_TABLE: [u32; 256] = {
         let mask = i as u8;
         
         // Count connected neighbors
-        let cardinal_count = ((mask >> 0) & 1)
+        let cardinal_count = (mask & 1)
             + ((mask >> 2) & 1)
             + ((mask >> 4) & 1)
             + ((mask >> 6) & 1);

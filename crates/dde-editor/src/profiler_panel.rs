@@ -3,7 +3,6 @@
 //! Editor UI for viewing real-time performance metrics and budgets.
 
 use std::collections::VecDeque;
-use std::time::Duration;
 
 /// Profiler panel UI state
 pub struct ProfilerPanel {
@@ -291,10 +290,7 @@ impl ProfilerPanel {
         if ui.button("📁 Export to CSV").clicked() {
             // Would open file dialog in real implementation
             // For now, just export to a default path
-            match profiler.export_csv("profile_data.csv") {
-                Ok(_) => {}
-                Err(_) => {}
-            }
+            if let Ok(_) = profiler.export_csv("profile_data.csv") {}
         }
     }
 

@@ -96,7 +96,7 @@ impl ReplayPanel {
         if let Ok(entries) = std::fs::read_dir(&self.replay_directory) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().map_or(false, |e| e == "ddr") {
+                if path.extension().is_some_and(|e| e == "ddr") {
                     if let Ok(metadata) = entry.metadata() {
                         let file_size = metadata.len();
                         // Try to load metadata
@@ -464,10 +464,8 @@ impl ReplayPanel {
                     if ui.button("⏸ Pause").clicked() {
                         player.pause();
                     }
-                } else {
-                    if ui.button("▶ Play").clicked() {
-                        player.play();
-                    }
+                } else if ui.button("▶ Play").clicked() {
+                    player.play();
                 }
 
                 // Stop
@@ -578,7 +576,7 @@ impl ReplayPanel {
 
     /// Check if playing
     pub fn is_playing(&self) -> bool {
-        self.player.as_ref().map_or(false, |p| p.is_playing())
+        self.player.as_ref().is_some_and(|p| p.is_playing())
     }
 
     /// Record inputs during recording

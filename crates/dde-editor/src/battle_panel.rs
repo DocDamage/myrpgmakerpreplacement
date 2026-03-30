@@ -209,10 +209,8 @@ impl BattlePanel {
                 if ui.button("⏹️ End Battle").clicked() {
                     interface.end_battle();
                 }
-            } else {
-                if ui.button("▶️ Start Test Battle").clicked() {
-                    interface.start_test_battle(self.test_entity_count, self.formation_layout);
-                }
+            } else if ui.button("▶️ Start Test Battle").clicked() {
+                interface.start_test_battle(self.test_entity_count, self.formation_layout);
             }
         });
 
