@@ -3,6 +3,8 @@
 //! Built-in frame profiler for tracking system performance budgets.
 //! Toggled with F11 in editor mode.
 
+pub mod advanced;
+
 use std::collections::VecDeque;
 use std::time::Instant;
 

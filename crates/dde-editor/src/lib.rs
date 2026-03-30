@@ -2,6 +2,7 @@
 //!
 //! Editor mode with egui panels for world editing.
 
+pub mod battle_panel;
 pub mod behavior_tree;
 pub mod commands;
 pub mod collaboration_panel;
@@ -9,17 +10,24 @@ pub mod cutscene_editor;
 pub mod director_panel;
 pub mod documentation_panel;
 pub mod export;
+pub mod hot_reload_panel;
 pub mod live_play;
+pub mod profiler_panel;
+pub mod sync_panel;
 pub mod tilemap;
 pub mod timeline;
 pub mod visual_script;
 pub mod visual_script_editor;
 
+pub use battle_panel::BattlePanel;
 pub use collaboration_panel::{CollaborationPanel, CollaborationExt};
 pub use cutscene_editor::CutsceneEditor;
 pub use director_panel::DirectorPanel;
 pub use documentation_panel::{DocumentationPanel, ExportFormat, GeneratedDocs};
+pub use hot_reload_panel::HotReloadPanel;
 pub use live_play::{CameraState, EditorController, PlayMode};
+pub use profiler_panel::ProfilerPanel;
+pub use sync_panel::SyncPanel;
 pub use timeline::*;
 pub use visual_script::canvas::CanvasStyle;
 
@@ -45,6 +53,8 @@ pub struct Editor {
     pub visual_script_editor: VisualScriptEditor,
     /// Auto-documentation panel
     pub documentation_panel: DocumentationPanel,
+    /// Hot-reload panel
+    pub hot_reload_panel: HotReloadPanel,
 }
 
 impl Editor {
@@ -59,6 +69,7 @@ impl Editor {
             cutscene_editor: CutsceneEditor::new(),
             visual_script_editor: VisualScriptEditor::new(),
             documentation_panel: DocumentationPanel::new(),
+            hot_reload_panel: HotReloadPanel::new(),
         }
     }
 

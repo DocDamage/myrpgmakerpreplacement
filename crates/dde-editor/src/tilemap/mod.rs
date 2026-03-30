@@ -7,6 +7,7 @@
 //! - Zoom/pan navigation
 //! - JSON export for Tiled compatibility
 
+pub mod autotile;
 pub mod layer;
 pub mod map;
 pub mod tools;

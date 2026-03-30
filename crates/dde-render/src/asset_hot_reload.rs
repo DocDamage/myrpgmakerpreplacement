@@ -3,7 +3,6 @@
 //! Watches asset directories and reloads spritesheets, audio, and other assets
 //! without requiring an engine restart.
 
-use image::GenericImageView;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -352,110 +351,14 @@ pub trait LuaReloader {
     fn can_reload(&self, path: &Path) -> bool;
 }
 
-/// Texture manager for handling sprite/texture reloading
-pub struct TextureManager {
-    textures: Arc<Mutex<HashMap<PathBuf, TextureEntry>>>,
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
-}
-
-/// Texture cache entry
-#[derive(Debug, Clone)]
-pub struct TextureEntry {
-    pub data: Vec<u8>,
-    pub dimensions: (u32, u32),
-    pub last_modified: std::time::SystemTime,
-}
-
-impl TextureManager {
-    /// Create a new texture manager
-    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
-        Self {
-            textures: Arc::new(Mutex::new(HashMap::new())),
-            device,
-            queue,
-        }
-    }
-
-    /// Update a texture in the cache
-    pub fn update_texture(&self, path: &Path, img: image::DynamicImage) {
-        let rgba = img.to_rgba8();
-        let dimensions = img.dimensions();
-
-        let entry = TextureEntry {
-            data: rgba.into_raw(),
-            dimensions,
-            last_modified: std::time::SystemTime::now(),
-        };
-
-        if let Ok(mut textures) = self.textures.lock() {
-            textures.insert(path.to_path_buf(), entry);
-            tracing::info!(
-                "Updated texture: {:?} ({}x{})",
-                path,
-                dimensions.0,
-                dimensions.1
-            );
-        }
-    }
-
-    /// Get texture data
-    pub fn get_texture(&self, path: &Path) -> Option<TextureEntry> {
-        if let Ok(textures) = self.textures.lock() {
-            textures.get(path).cloned()
-        } else {
-            None
-        }
-    }
-
-    /// Remove a texture from cache
-    pub fn remove_texture(&self, path: &Path) {
-        if let Ok(mut textures) = self.textures.lock() {
-            textures.remove(path);
-        }
-    }
-}
-
-impl Clone for TextureManager {
-    fn clone(&self) -> Self {
-        Self {
-            textures: Arc::clone(&self.textures),
-            device: Arc::clone(&self.device),
-            queue: Arc::clone(&self.queue),
-        }
-    }
-}
-
-impl TextureEntry {
-    /// Create wgpu texture from entry
-    pub fn create_wgpu_texture(&self, device: &wgpu::Device) -> wgpu::Texture {
-        let texture_size = wgpu::Extent3d {
-            width: self.dimensions.0,
-            height: self.dimensions.1,
-            depth_or_array_layers: 1,
-        };
-
-        device.create_texture(&wgpu::TextureDescriptor {
-            size: texture_size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            label: Some("hot_reload_texture"),
-            view_formats: &[],
-        })
-    }
-}
-
 /// Handler for sprite sheet and texture assets
 pub struct SpriteSheetHandler {
-    pub texture_manager: TextureManager,
+    texture_manager: Arc<crate::texture::TextureManager>,
 }
 
 impl SpriteSheetHandler {
     /// Create a new sprite sheet handler
-    pub fn new(texture_manager: TextureManager) -> Self {
+    pub fn new(texture_manager: Arc<crate::texture::TextureManager>) -> Self {
         Self { texture_manager }
     }
 }
@@ -466,13 +369,11 @@ impl AssetHandler for SpriteSheetHandler {
     }
 
     fn reload(&self, path: &Path) -> ReloadResult {
-        // Reload PNG, update texture cache
-        match image::open(path) {
-            Ok(img) => {
-                self.texture_manager.update_texture(path, img);
-                ReloadResult::Success
-            }
-            Err(e) => ReloadResult::Failed(format!("Failed to load image: {}", e)),
+        // Use the texture manager's hot_reload for GPU texture update
+        if self.texture_manager.hot_reload(path) {
+            ReloadResult::Success
+        } else {
+            ReloadResult::Failed(format!("Failed to hot-reload texture: {:?}", path))
         }
     }
 
@@ -778,15 +679,5 @@ mod tests {
         assert_eq!(ReloadResult::Skipped.to_string(), "Skipped");
     }
 
-    #[test]
-    fn test_texture_entry_creation() {
-        let entry = TextureEntry {
-            data: vec![0, 1, 2, 3],
-            dimensions: (1, 1),
-            last_modified: std::time::SystemTime::now(),
-        };
-
-        assert_eq!(entry.dimensions, (1, 1));
-        assert_eq!(entry.data.len(), 4);
-    }
+    
 }

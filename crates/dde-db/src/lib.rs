@@ -11,6 +11,7 @@ pub mod migrations;
 pub mod models;
 pub mod queries;
 pub mod screenshot;
+pub mod sync;
 
 pub use models::*;
 pub use screenshot::*;
