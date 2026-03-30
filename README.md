@@ -1,8 +1,12 @@
 # DocDamage Engine (DDE)
 
 [![Rust CI](https://github.com/DocDamage/myrpgmakerpreplacement/actions/workflows/rust.yml/badge.svg)](https://github.com/DocDamage/myrpgmakerpreplacement/actions/workflows/rust.yml)
+[![Features](https://img.shields.io/badge/features-71%2F71-brightgreen)](FEATURES.md)
+[![Status](https://img.shields.io/badge/milestone-Week%202%20Complete-blue)](PROJECT_STATUS.md)
 
 A desktop RPG maker and simulation engine built in Rust.
+
+> 🎉 **Week 2 Milestone Complete!** 71 backend features surfaced in UI. See [FEATURES.md](FEATURES.md) for complete list.
 
 ## Overview
 
@@ -14,6 +18,37 @@ DocDamage Engine is an opinionated RPG construction kit where the simulation lay
 - **Data-Driven**: TOML configuration for all game logic, formulas, and tuning
 - **Modular**: 11 workspace crates for clean separation of concerns
 - **Collaborative**: Real-time multiplayer editing with CRDT synchronization
+
+---
+
+## 🆕 What's New (Week 2)
+
+### Major Features Added
+
+| Feature | Description |
+|---------|-------------|
+| **Status Effect Editor** | Visual editor for 34+ status effect types (Poison, Burn, Stun, Buffs, etc.) |
+| **Item Database Editor** | Complete item creation system with 8 types, effects, prices |
+| **Damage Formula Editor** | Real-time formula testing with simulation |
+| **Formation Editor** | Visual 5x3 battle formation designer |
+| **Behavior Tree Editor** | Node-based AI editor with debugger |
+| **Dialogue Editor** | Node-based conversation designer |
+| **Particle Editor** | Live preview particle system editor |
+| **Asset Pipeline** | Kanban workflow (Inbox→Production) |
+| **Collaboration Panel** | Real-time chat, presence, entity locking |
+| **Script Manager** | Lua script browser with hot reload |
+
+### New Editor Panels (18 Total)
+
+**Battle:** Formation Editor, Status Effect Editor, Item Database, Battle Log Viewer, Turn Queue Visual  
+**AI:** Behavior Tree Editor, NPC Schedule Editor, Patrol Path Editor, Dialogue Editor  
+**Assets:** Asset Pipeline, Classification Rules, Dependency Graph, Duplicate Scanner  
+**Tools:** Script Manager, Hot Reload Panel, Replay Theater  
+**Effects:** Particle Editor  
+**Debug:** Pathfinding Debug, Event Bus Monitor, Advanced Profiler  
+**Collaboration:** Collaboration Panel, Lock Manager
+
+See [FEATURES.md](FEATURES.md) for complete feature list.
 
 ---
 
