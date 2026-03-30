@@ -7,7 +7,7 @@ use dde_ai::documentation::{
     generator::{
         CharacterProfile, DocGenerator, QuestLog, StoreDescription, WorldBible, WorldDataProvider,
     },
-    exporters::{export_markdown, export_pdf, export_quest_log, export_wiki},
+    exporters::{export_markdown, export_pdf, export_wiki},
 };
 
 /// Export format options

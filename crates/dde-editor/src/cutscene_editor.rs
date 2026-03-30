@@ -8,13 +8,11 @@
 
 use crate::timeline::{
     Cutscene, CutsceneLibrary, CutsceneData, CutsceneEvent,
-    EasingFunction, Interpolation, Keyframe, PlaybackState,
-    PreviewFrame, PreviewRenderer, TimelineEditor, Track, TrackType, TrackValue,
+    EasingFunction, Interpolation, PlaybackState, PreviewRenderer, TimelineEditor, Track, TrackType, TrackValue,
     export_to_events, TrackId,
 };
 use crate::timeline::keyframes::EffectType;
-use crate::timeline::keyframes::{CameraValue, DialogueValue, EffectValue, EntityValue, AudioValue};
-use dde_core::{Direction4, Entity, World};
+use dde_core::{Direction4, World};
 
 /// Main cutscene editor window
 pub struct CutsceneEditor {
@@ -959,6 +957,7 @@ impl Default for CutsceneEditor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::timeline::keyframes::CameraValue;
 
     #[test]
     fn test_cutscene_editor_new() {

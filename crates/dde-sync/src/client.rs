@@ -10,7 +10,7 @@ use tokio::net::TcpStream;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio_tungstenite::{
     connect_async,
-    tungstenite::{Error as WsError, Message},
+    tungstenite::Message,
     MaybeTlsStream, WebSocketStream,
 };
 use uuid::Uuid;

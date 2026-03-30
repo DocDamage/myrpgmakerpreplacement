@@ -6,7 +6,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use dde_core::ai::{BehaviorTreeRunner, BtStatus, NodeId};
-use dde_core::{Entity, World};
+use dde_core::Entity;
 use egui::{Color32, Pos2, Rect, RichText, Ui, Vec2};
 
 /// Debug visualizer for running behavior trees

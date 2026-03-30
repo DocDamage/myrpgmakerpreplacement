@@ -1,11 +1,9 @@
 //! Collaboration panel for real-time multiplayer editing
 
 use dde_sync::{
-    client::{ClientConfig, ConnectionState, SyncClient},
+    client::{ClientConfig, SyncClient},
     presence::{UserPresence, UserStatus},
-    protocol::SyncMessage,
 };
-use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Collaboration panel for the editor
@@ -198,7 +196,7 @@ impl CollaborationPanel {
         self.connection_status = ConnectionStatus::Connecting;
 
         let config = ClientConfig::new(&self.server_url, &self.username, project_id);
-        let mut client = SyncClient::new(config);
+        let client = SyncClient::new(config);
 
         // Set up message handler
         // Note: Using a channel or message queue would be safer than raw pointers

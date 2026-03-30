@@ -4,13 +4,11 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use dde_core::Entity;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::{
     accept_async,
-    tungstenite::{Error as WsError, Message},
-    WebSocketStream,
+    tungstenite::Message,
 };
 use uuid::Uuid;
 

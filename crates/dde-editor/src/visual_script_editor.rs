@@ -235,7 +235,7 @@ impl VisualScriptEditor {
         
         if let Some(Ok(ref script)) = self.last_compile_result {
             self.log_info("Starting test execution...");
-            let mut executor = ScriptExecutor::new();
+            let executor = ScriptExecutor::new();
             // Note: We'd need a World reference here for actual execution
             // For now, just log that we're ready to execute
             self.test_executor = Some(executor);

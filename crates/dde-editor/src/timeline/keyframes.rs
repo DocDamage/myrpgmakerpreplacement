@@ -3,7 +3,7 @@
 //! Provides smooth transitions between values using various interpolation methods
 //! and easing functions.
 
-use dde_core::{Direction4, Entity};
+use dde_core::Direction4;
 use serde::{Deserialize, Serialize};
 
 /// A single keyframe at a specific time point

@@ -3,7 +3,7 @@
 //! Renders the cutscene at the current playhead position for live editing feedback.
 
 use super::editor::TimelineEditor;
-use super::keyframes::{CameraValue, EffectType, TrackValue, Vec3 as KeyframeVec3};
+use super::keyframes::{CameraValue, EffectType, TrackValue};
 use dde_core::{Direction4, Entity, World};
 use glam::{Mat4, Vec3};
 

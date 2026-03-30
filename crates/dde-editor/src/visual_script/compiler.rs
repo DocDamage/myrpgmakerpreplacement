@@ -677,13 +677,13 @@ pub fn to_engine_events(events: &[GameEvent]) -> Vec<EngineEvent> {
 
 fn convert_to_engine_event(event: &GameEvent) -> Option<EngineEvent> {
     match event {
-        GameEvent::ShowDialogue { text, speaker, .. } => {
+        GameEvent::ShowDialogue {   .. } => {
             Some(EngineEvent::DialogueStarted {
                 npc: hecs::Entity::DANGLING, // Placeholder
                 tree_id: None,
             })
         }
-        GameEvent::StartBattle { encounter_id, .. } => {
+        GameEvent::StartBattle {  .. } => {
             Some(EngineEvent::BattleTriggered {
                 enemies: vec![],
                 terrain: "default".to_string(),

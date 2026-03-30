@@ -4,8 +4,7 @@
 //! Shows quest proposals, active quests, tension graphs, and settings.
 
 use dde_ai::director::{
-    ActiveQuest, ContentType, DirectorConfig, DirectorStats, DirectorSystem, GameContext,
-    PacingConfig, QuestProposal, QuestStage, QuestType, TensionCurve,
+    ActiveQuest, DirectorConfig, DirectorStats, DirectorSystem, QuestProposal, QuestStage, TensionCurve,
 };
 
 /// Director panel UI state

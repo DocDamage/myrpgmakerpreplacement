@@ -8,11 +8,11 @@ use dde_core::ai::behavior_tree::{
 };
 use dde_core::{Entity, World};
 
-use super::nodes::{BtNode, BtNodeType, MoveSpeed, MoveTarget, Target};
+use super::nodes::{BtNode, BtNodeType, MoveSpeed, MoveTarget};
 
 /// Compile an editor behavior tree to runtime format
 pub fn compile(tree: &BtNode) -> Result<CompiledBehaviorTree, CompileError> {
-    let mut validator = Validator::new();
+    let validator = Validator::new();
     validator.validate(tree)?;
     
     let optimizer = Optimizer::new();
