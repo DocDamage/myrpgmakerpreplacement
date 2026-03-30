@@ -478,7 +478,7 @@ impl<'a> Compiler<'a> {
                     "RandomChance must be connected to Branch condition pin".to_string()
                 ))
             }
-            NodeType::GameFlag { flag_key, expected } => {
+            NodeType::GameFlag { flag_key: _flag_key, expected: _expected } => {
                 Err(CompileError::UnsupportedNodeType(
                     "GameFlag must be connected to Branch condition pin".to_string()
                 ))
@@ -689,7 +689,7 @@ fn convert_to_engine_event(event: &GameEvent) -> Option<EngineEvent> {
                 terrain: "default".to_string(),
             })
         }
-        GameEvent::Teleport { map_id, x, y } => {
+        GameEvent::Teleport { map_id, x: _x, y: _y } => {
             Some(EngineEvent::SubMapEntered {
                 entity: hecs::Entity::DANGLING,
                 sub_map_id: *map_id,

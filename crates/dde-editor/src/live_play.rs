@@ -637,7 +637,7 @@ impl EditorController {
 
 /// Event type for play mode changes
 #[derive(Debug, Clone)]
-struct PlayModeChangedEvent(PlayModeEvent);
+struct PlayModeChangedEvent(#[allow(dead_code)] PlayModeEvent);
 
 impl dde_core::events::Event for PlayModeChangedEvent {
     fn event_type(&self) -> dde_core::events::EventType {

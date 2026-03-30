@@ -16,7 +16,7 @@ pub struct DirectorPanel {
     /// Selected proposal index (for UI highlighting)
     selected_proposal: Option<usize>,
     /// Selected active quest index
-    selected_quest: Option<usize>,
+    _selected_quest: Option<usize>,
     /// Whether to auto-generate quests
     auto_generate: bool,
     /// Tension curve visualization data
@@ -46,7 +46,7 @@ impl DirectorPanel {
             visible: false,
             selected_tab: DirectorTab::Proposals,
             selected_proposal: None,
-            selected_quest: None,
+            _selected_quest: None,
             auto_generate: true,
             tension_graph: Vec::with_capacity(100),
             status_message: None,
@@ -374,7 +374,7 @@ impl DirectorPanel {
     fn draw_active_quest_card(
         &mut self,
         ui: &mut egui::Ui,
-        idx: usize,
+        _idx: usize,
         quest: &ActiveQuest,
         director: &mut DirectorSystem,
     ) {
@@ -415,7 +415,7 @@ impl DirectorPanel {
                 // Objectives
                 ui.collapsing("Objectives", |ui| {
                     for obj in &quest.objectives {
-                        let obj_progress = obj.progress_percentage();
+                        let _obj_progress = obj.progress_percentage();
                         ui.horizontal(|ui| {
                             if obj.completed {
                                 ui.label("✓");

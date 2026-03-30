@@ -44,13 +44,13 @@ pub struct BehaviorTreeEditor {
     /// Show minimap
     show_minimap: bool,
     /// Node ID counter for new nodes
-    node_id_counter: u64,
+    _node_id_counter: u64,
     /// Clipboard for copy/paste
     clipboard: Option<BtNode>,
     /// Modified flag
     modified: bool,
     /// File path for save/load
-    file_path: Option<std::path::PathBuf>,
+    _file_path: Option<std::path::PathBuf>,
 }
 
 impl Default for BehaviorTreeEditor {
@@ -73,10 +73,10 @@ impl BehaviorTreeEditor {
             show_grid: true,
             grid_size: 20.0,
             show_minimap: false,
-            node_id_counter: 1,
+            _node_id_counter: 1,
             clipboard: None,
             modified: false,
-            file_path: None,
+            _file_path: None,
         }
     }
 
@@ -289,6 +289,7 @@ impl BehaviorTreeEditor {
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     /// Draw connections between nodes
     fn draw_connections(&self, ui: &mut Ui, node: &BtNode, debugger: Option<&BtDebugger>) {
         let painter = ui.painter();
@@ -368,6 +369,7 @@ impl BehaviorTreeEditor {
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     /// Draw a node and its children recursively
     fn draw_node_recursive(&mut self, ui: &mut Ui, node: BtNode, debugger: Option<&BtDebugger>) {
         let screen_pos = self.world_to_screen(Pos2::new(node.position[0], node.position[1]));
@@ -800,6 +802,7 @@ impl BehaviorTreeEditor {
         )
     }
 
+    #[allow(dead_code)]
     /// Convert screen position to world position
     fn screen_to_world(&self, screen_pos: Pos2) -> Pos2 {
         Pos2::new(

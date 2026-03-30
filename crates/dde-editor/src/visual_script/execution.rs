@@ -448,7 +448,7 @@ impl ScriptExecutor {
         &mut self,
         text: &str,
         speaker: &str,
-        portrait: Option<u32>,
+        _portrait: Option<u32>,
         _world: &mut World,
     ) -> ExecutionResult<()> {
         tracing::debug!("Show dialogue from {}: {}", speaker, text);
@@ -769,7 +769,7 @@ impl ScriptExecutor {
     }
 
     /// Resume execution after a pause
-    pub fn resume(&mut self, delta_time: f32, world: &mut World) -> ExecutionResult<()> {
+    pub fn resume(&mut self, delta_time: f32, _world: &mut World) -> ExecutionResult<()> {
         if let ExecutionState::Paused { resume_after } = self.state {
             let new_time = resume_after - delta_time;
             if new_time <= 0.0 {

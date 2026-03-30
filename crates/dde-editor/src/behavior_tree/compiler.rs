@@ -58,6 +58,7 @@ impl Validator {
         self.validate_node(root)
     }
     
+    #[allow(clippy::only_used_in_recursion)]
     fn validate_node(&self, node: &BtNode) -> Result<(), CompileError> {
         match &node.node_type {
             BtNodeType::Selector { children } | BtNodeType::Sequence { children } => {
@@ -111,13 +112,6 @@ impl Validator {
                 if min >= max || *max > 24 {
                     return Err(CompileError::InvalidConfiguration(
                         format!("Invalid TimeOfDay range: {} to {}", min, max)
-                    ));
-                }
-            }
-            BtNodeType::Cooldown { seconds, .. } => {
-                if *seconds <= 0.0 {
-                    return Err(CompileError::InvalidConfiguration(
-                        "Cooldown seconds must be positive".to_string()
                     ));
                 }
             }
@@ -201,6 +195,7 @@ impl Compiler {
         Self
     }
     
+    #[allow(clippy::only_used_in_recursion)]
     fn compile_node(&self, node: &BtNode) -> Result<RuntimeNode, CompileError> {
         match &node.node_type {
             BtNodeType::Selector { children } => {

@@ -34,7 +34,7 @@ pub struct GeneratedDocs {
 
 /// Auto-Documentation Panel
 pub struct DocumentationPanel {
-    generator: DocGenerator,
+    _generator: DocGenerator,
     generated_docs: Option<GeneratedDocs>,
     export_format: ExportFormat,
     generating: bool,
@@ -56,7 +56,7 @@ impl DocumentationPanel {
     /// Create a new documentation panel
     pub fn new() -> Self {
         Self {
-            generator: DocGenerator::new(),
+            _generator: DocGenerator::new(),
             generated_docs: None,
             export_format: ExportFormat::Markdown,
             generating: false,

@@ -233,7 +233,7 @@ impl VisualScriptEditor {
             self.compile();
         }
         
-        if let Some(Ok(ref script)) = self.last_compile_result {
+        if let Some(Ok(ref _script)) = self.last_compile_result {
             self.log_info("Starting test execution...");
             let executor = ScriptExecutor::new();
             // Note: We'd need a World reference here for actual execution

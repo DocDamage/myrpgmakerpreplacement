@@ -25,7 +25,7 @@ pub struct CollaborationPanel {
     /// Selected collaborator for private actions
     selected_collaborator: Option<Uuid>,
     /// Auto-connect on startup
-    auto_connect: bool,
+    _auto_connect: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,15 +33,16 @@ enum ConnectionStatus {
     Disconnected,
     Connecting,
     Connected,
+    #[allow(dead_code)]
     Error,
 }
 
 #[derive(Debug, Clone)]
 struct ChatMessage {
-    client_id: Uuid,
+    _client_id: Uuid,
     username: String,
     text: String,
-    timestamp: u64,
+    _timestamp: u64,
     is_system: bool,
 }
 
@@ -56,7 +57,7 @@ impl CollaborationPanel {
             show_cursors: true,
             chat_messages: Vec::new(),
             selected_collaborator: None,
-            auto_connect: false,
+            _auto_connect: false,
         }
     }
 
@@ -116,7 +117,7 @@ impl CollaborationPanel {
     fn draw_collaborators_section(&mut self, ui: &mut egui::Ui) {
         ui.heading("Collaborators");
 
-        if let Some(client) = &self.client {
+        if let Some(_client) = &self.client {
             // This would be async in a real implementation
             // For now, we'll use a placeholder
             let collaborators: Vec<UserPresence> = Vec::new();
@@ -220,14 +221,14 @@ impl CollaborationPanel {
             return;
         }
 
-        if let Some(client) = &self.client {
+        if let Some(_client) = &self.client {
             // In a real implementation, this would be async
             // For now, just add to local messages
             self.chat_messages.push(ChatMessage {
-                client_id: Uuid::nil(),
+                _client_id: Uuid::nil(),
                 username: self.username.clone(),
                 text: self.chat_input.clone(),
-                timestamp: current_timestamp(),
+                _timestamp: current_timestamp(),
                 is_system: false,
             });
 
@@ -237,10 +238,10 @@ impl CollaborationPanel {
 
     fn add_system_message(&mut self, text: String) {
         self.chat_messages.push(ChatMessage {
-            client_id: Uuid::nil(),
+            _client_id: Uuid::nil(),
             username: "System".to_string(),
             text,
-            timestamp: current_timestamp(),
+            _timestamp: current_timestamp(),
             is_system: true,
         });
     }

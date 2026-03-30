@@ -139,7 +139,7 @@ impl BtDebugger {
 
     /// Set refresh rate
     pub fn set_refresh_rate(&mut self, rate: f32) {
-        self.refresh_rate = rate.max(1.0).min(60.0);
+        self.refresh_rate = rate.clamp(1.0, 60.0);
     }
 
     /// Toggle pause

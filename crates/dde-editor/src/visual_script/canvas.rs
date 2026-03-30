@@ -781,7 +781,7 @@ impl NodeCanvas {
     }
 
     /// Draw pins for a node
-    fn draw_pins(&mut self, ui: &mut egui::Ui, node: &Node, rect: &Rect, node_rect: &Rect) {
+    fn draw_pins(&mut self, ui: &mut egui::Ui, node: &Node, _rect: &Rect, node_rect: &Rect) {
         let pin_radius = self.style.node_pin_radius * self.zoom;
         let pin_spacing = self.style.node_pin_spacing * self.zoom;
         let header_height = self.style.node_header_height * self.zoom;

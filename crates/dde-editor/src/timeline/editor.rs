@@ -535,7 +535,7 @@ impl TimelineEditor {
             }
 
             // Current value indicator
-            if let Some(value) = track.value_at(self.playhead) {
+            if let Some(_value) = track.value_at(self.playhead) {
                 let line_x = self.x_at_time(self.playhead, rect.min.x);
                 if line_x >= rect.min.x && line_x <= rect.max.x {
                     painter.line_segment(
@@ -585,6 +585,7 @@ impl TimelineEditor {
         x / self.zoom + self.scroll_offset
     }
 
+    #[allow(dead_code)]
     /// Snap time to grid if enabled
     fn snap_time(&self, time: f32) -> f32 {
         if self.snap_enabled {
