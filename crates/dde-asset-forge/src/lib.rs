@@ -7,6 +7,7 @@
 pub mod adapter;
 pub mod asset_os;
 pub mod classification;
+pub mod dependency_graph;
 pub mod duplicate_detection;
 
 #[cfg(feature = "embedded-server")]
@@ -18,6 +19,10 @@ pub mod webview;
 pub use adapter::{ForgeAction, ForgeState, SpriteGeneratorAdapter};
 pub use asset_os::{AssetOs, AssetPipelineStage, AssetReview};
 pub use classification::{AssetClassifier, ClassificationResult, ClassificationRule};
+pub use dependency_graph::{
+    AssetId, AssetNode, AssetType, Dependency, DependencyAnalysis, DependencyError,
+    DependencyGraph, DependencyKind,
+};
 pub use duplicate_detection::{DuplicateDetector, HashType};
 
 use std::path::PathBuf;
