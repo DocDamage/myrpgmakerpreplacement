@@ -182,6 +182,7 @@ pub fn export_wiki(world_bible: &WorldBible, characters: &[CharacterProfile]) ->
 }
 
 /// Convert markdown to HTML (simple implementation)
+#[allow(clippy::manual_strip)]
 fn markdown_to_html(markdown: &str) -> String {
     // This is a simplified markdown-to-HTML conversion
     // In production, use pulldown-cmark or similar

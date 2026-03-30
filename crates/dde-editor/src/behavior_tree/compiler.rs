@@ -381,6 +381,7 @@ fn collect_blackboard_keys(node: &BtNode, keys: &mut Vec<String>) {
 // Runtime condition implementations
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct IsPlayerNearbyCondition {
     radius: f32,
 }
@@ -398,6 +399,7 @@ impl dde_core::ai::behavior_tree::Condition for IsPlayerNearbyCondition {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct HealthBelowCondition {
     percent: f32,
 }
@@ -414,6 +416,7 @@ impl dde_core::ai::behavior_tree::Condition for HealthBelowCondition {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct RandomChanceCondition {
     percent: u8,
 }
@@ -488,6 +491,7 @@ impl dde_core::ai::behavior_tree::Condition for UnimplementedCondition {
 // Runtime action implementations
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct MoveToAction {
     target: MoveTarget,
     speed: MoveSpeed,
