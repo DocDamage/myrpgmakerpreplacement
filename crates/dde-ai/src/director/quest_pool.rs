@@ -97,7 +97,8 @@ impl QuestPool {
         // Process completions (in reverse order to maintain indices)
         for idx in completed.iter().rev() {
             let quest = self.active_quests.remove(*idx);
-            self.quest_history.push(QuestHistory::from_quest(&quest, QuestOutcome::Completed));
+            self.quest_history
+                .push(QuestHistory::from_quest(&quest, QuestOutcome::Completed));
         }
     }
 
@@ -216,7 +217,11 @@ impl QuestPool {
         if self.active_quests.is_empty() {
             0.0
         } else {
-            let total: f32 = self.active_quests.iter().map(|q| q.completion_percentage()).sum();
+            let total: f32 = self
+                .active_quests
+                .iter()
+                .map(|q| q.completion_percentage())
+                .sum();
             total / self.active_quests.len() as f32
         }
     }
@@ -487,10 +492,9 @@ impl ActiveQuest {
             self.stage = QuestStage::InProgress;
         } else if completed_count < total_count {
             self.stage = QuestStage::AlmostComplete;
-        } else if completed_count == total_count
-            && self.stage != QuestStage::ReadyForTurnIn {
-                self.stage = QuestStage::ReadyForTurnIn;
-            }
+        } else if completed_count == total_count && self.stage != QuestStage::ReadyForTurnIn {
+            self.stage = QuestStage::ReadyForTurnIn;
+        }
     }
 }
 
@@ -734,10 +738,10 @@ mod tests {
     #[test]
     fn test_propose_and_activate() {
         let mut pool = QuestPool::new();
-        
+
         pool.propose_quests(vec![create_test_proposal()]);
         assert_eq!(pool.get_proposals().len(), 1);
-        
+
         let quest = pool.activate_quest(0);
         assert!(quest.is_some());
         assert_eq!(pool.get_proposals().len(), 0);
@@ -747,11 +751,11 @@ mod tests {
     #[test]
     fn test_quest_completion() {
         let mut pool = QuestPool::new();
-        
+
         pool.propose_quests(vec![create_test_proposal()]);
         let quest = pool.activate_quest(0).unwrap();
         let quest_id = quest.id;
-        
+
         pool.complete_quest(quest_id);
         assert_eq!(pool.active_quest_count(), 0);
         assert_eq!(pool.completed_quest_count(), 1);
@@ -761,11 +765,11 @@ mod tests {
     fn test_objective_progress() {
         let mut obj = QuestObjective::new(1, "Test objective", 5);
         assert_eq!(obj.progress_percentage(), 0.0);
-        
+
         obj.increment(2);
         assert_eq!(obj.current, 2);
         assert!(!obj.is_complete());
-        
+
         obj.increment(5);
         assert_eq!(obj.current, 5);
         assert!(obj.is_complete());
@@ -782,7 +786,7 @@ mod tests {
     fn test_reject_proposal() {
         let mut pool = QuestPool::new();
         pool.propose_quests(vec![create_test_proposal()]);
-        
+
         assert!(pool.reject_proposal(0));
         assert_eq!(pool.get_proposals().len(), 0);
         assert!(!pool.reject_proposal(0)); // Already empty

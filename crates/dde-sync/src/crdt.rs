@@ -209,10 +209,13 @@ impl SqliteOp {
     /// Convert to SQL string
     pub fn to_sql(&self) -> String {
         match self {
-            SqliteOp::Insert { table, columns, values } => {
-                let placeholders: Vec<String> = (1..=values.len())
-                    .map(|i| format!("?{i}"))
-                    .collect();
+            SqliteOp::Insert {
+                table,
+                columns,
+                values,
+            } => {
+                let placeholders: Vec<String> =
+                    (1..=values.len()).map(|i| format!("?{i}")).collect();
                 format!(
                     "INSERT INTO {} ({}) VALUES ({})",
                     table,
@@ -220,7 +223,12 @@ impl SqliteOp {
                     placeholders.join(", ")
                 )
             }
-            SqliteOp::Update { table, columns, where_clause, .. } => {
+            SqliteOp::Update {
+                table,
+                columns,
+                where_clause,
+                ..
+            } => {
                 let set_clause: Vec<String> = columns
                     .iter()
                     .enumerate()
@@ -233,7 +241,11 @@ impl SqliteOp {
                     where_clause
                 )
             }
-            SqliteOp::Delete { table, where_clause, .. } => {
+            SqliteOp::Delete {
+                table,
+                where_clause,
+                ..
+            } => {
                 format!("DELETE FROM {} WHERE {}", table, where_clause)
             }
         }
@@ -291,9 +303,14 @@ impl ProjectCrdt {
     }
 
     /// Apply a component update to the CRDT
-    pub fn update_component(&mut self, entity: dde_core::Entity, component: crate::protocol::ComponentData) {
+    pub fn update_component(
+        &mut self,
+        entity: dde_core::Entity,
+        component: crate::protocol::ComponentData,
+    ) {
         let timestamp = current_timestamp();
-        self.entities.insert(entity, component, timestamp, self.node_id);
+        self.entities
+            .insert(entity, component, timestamp, self.node_id);
         self.version += 1;
     }
 

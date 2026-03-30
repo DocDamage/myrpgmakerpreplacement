@@ -337,15 +337,15 @@ mod tests {
     #[test]
     fn test_register_and_lookup() {
         let mut mapper = EntityMapper::new();
-        
+
         mapper.register(100, 1);
         mapper.register(200, 2);
-        
+
         assert_eq!(mapper.to_db(100), Some(1));
         assert_eq!(mapper.to_db(200), Some(2));
         assert_eq!(mapper.to_ecs(1), Some(100));
         assert_eq!(mapper.to_ecs(2), Some(200));
-        
+
         assert!(mapper.has_ecs(100));
         assert!(mapper.has_db(1));
         assert!(!mapper.has_ecs(999));
@@ -355,16 +355,16 @@ mod tests {
     #[test]
     fn test_unregister() {
         let mut mapper = EntityMapper::new();
-        
+
         mapper.register(100, 1);
         assert_eq!(mapper.len(), 1);
-        
+
         let unmapped = mapper.unregister_ecs(100);
         assert_eq!(unmapped, Some(1));
         assert_eq!(mapper.len(), 0);
         assert!(!mapper.has_ecs(100));
         assert!(!mapper.has_db(1));
-        
+
         // Re-register and unregister by DB
         mapper.register(100, 1);
         let unmapped = mapper.unregister_db(1);
@@ -375,13 +375,13 @@ mod tests {
     #[test]
     fn test_allocate_id() {
         let mut mapper = EntityMapper::new();
-        
+
         let id1 = mapper.allocate_db_id();
         assert_eq!(id1, 1);
-        
+
         let id2 = mapper.allocate_db_id();
         assert_eq!(id2, 2);
-        
+
         // Register with higher ID
         mapper.register(100, 10);
         let id3 = mapper.allocate_db_id();
@@ -391,15 +391,15 @@ mod tests {
     #[test]
     fn test_get_or_allocate() {
         let mut mapper = EntityMapper::new();
-        
+
         // First time allocates new
         let db_id1 = mapper.get_or_allocate_db_id(100);
         assert_eq!(db_id1, 1);
-        
+
         // Second time returns existing
         let db_id2 = mapper.get_or_allocate_db_id(100);
         assert_eq!(db_id2, 1);
-        
+
         // Different ECS gets new ID
         let db_id3 = mapper.get_or_allocate_db_id(200);
         assert_eq!(db_id3, 2);
@@ -408,10 +408,10 @@ mod tests {
     #[test]
     fn test_re_register() {
         let mut mapper = EntityMapper::new();
-        
+
         mapper.register(100, 1);
         mapper.register(100, 2); // Re-register with different DB ID
-        
+
         assert_eq!(mapper.to_db(100), Some(2));
         assert!(!mapper.has_db(1)); // Old mapping removed
     }
@@ -422,13 +422,13 @@ mod tests {
         mapper.register(100, 1);
         mapper.register(200, 2);
         mapper.register(300, 3);
-        
+
         let exported = mapper.export_mappings();
         assert_eq!(exported.len(), 3);
-        
+
         let mut new_mapper = EntityMapper::new();
         new_mapper.load_mappings(exported);
-        
+
         assert_eq!(new_mapper.to_db(100), Some(1));
         assert_eq!(new_mapper.to_db(200), Some(2));
         assert_eq!(new_mapper.to_db(300), Some(3));
@@ -437,12 +437,12 @@ mod tests {
     #[test]
     fn test_validate() {
         let mut mapper = EntityMapper::new();
-        
+
         // Valid mappings
         mapper.register(100, 1);
         mapper.register(200, 2);
         assert!(mapper.validate().is_ok());
-        
+
         // Manually create inconsistency (shouldn't happen in normal use)
         mapper.db_to_ecs.insert(1, 999);
         assert!(mapper.validate().is_err());
@@ -452,9 +452,9 @@ mod tests {
     fn test_mapping_builder() {
         let mut builder = EntityMappingBuilder::new();
         builder.add(100, 1).add_named(200, 2, "Player");
-        
+
         assert_eq!(builder.len(), 2);
-        
+
         let mapper = builder.build();
         assert_eq!(mapper.to_db(100), Some(1));
         assert_eq!(mapper.to_db(200), Some(2));
@@ -464,12 +464,12 @@ mod tests {
     fn test_mapping_builder_json() {
         let mut builder = EntityMappingBuilder::new();
         builder.add(100, 1).add_named(200, 2, "Player");
-        
+
         let json = builder.to_json().unwrap();
         let loaded = EntityMappingBuilder::from_json(&json).unwrap();
-        
+
         assert_eq!(loaded.len(), 2);
-        
+
         let mapper = loaded.build();
         assert_eq!(mapper.to_db(100), Some(1));
         assert_eq!(mapper.to_db(200), Some(2));
@@ -478,10 +478,10 @@ mod tests {
     #[test]
     fn test_map_ecs_entities() {
         let mut mapper = EntityMapper::new();
-        
+
         let mappings = mapper.map_ecs_entities(&[100, 200, 300]);
         assert_eq!(mappings.len(), 3);
-        
+
         // Should have sequential IDs
         assert_eq!(mappings[0], (100, 1));
         assert_eq!(mappings[1], (200, 2));
@@ -491,14 +491,14 @@ mod tests {
     #[test]
     fn test_clear() {
         let mut mapper = EntityMapper::new();
-        
+
         mapper.register(100, 1);
         mapper.register(200, 2);
-        
+
         assert_eq!(mapper.len(), 2);
-        
+
         mapper.clear();
-        
+
         assert_eq!(mapper.len(), 0);
         assert!(mapper.is_empty());
         assert_eq!(mapper.next_db_id(), 1); // Reset
@@ -507,10 +507,10 @@ mod tests {
     #[test]
     fn test_statistics() {
         let mut mapper = EntityMapper::new();
-        
+
         mapper.register(100, 1);
         mapper.register(200, 5);
-        
+
         let stats = mapper.statistics();
         assert_eq!(stats.total_mappings, 2);
         assert_eq!(stats.next_db_id, 6); // 5 + 1

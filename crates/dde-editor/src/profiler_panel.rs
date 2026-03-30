@@ -128,17 +128,17 @@ impl ProfilerPanel {
     /// Update panel data
     pub fn update(&mut self, dt: f32, profiler: &dyn ProfilerInterface) {
         self.last_update += dt;
-        
+
         if self.last_update >= self.update_interval && profiler.is_enabled() {
             self.last_update = 0.0;
-            
+
             // Update frame time history
             let frame_time = profiler.average_frame_time(1);
             self.frame_time_history.push_back(frame_time);
             if self.frame_time_history.len() > self.max_history {
                 self.frame_time_history.pop_front();
             }
-            
+
             // Update memory history
             let memory = profiler.memory_mb();
             self.memory_history.push_back(memory);
@@ -175,7 +175,7 @@ impl ProfilerPanel {
                 if ui.checkbox(&mut enabled, "Enabled").changed() {
                     profiler.toggle();
                 }
-                
+
                 ui.checkbox(&mut self.advanced_mode, "Advanced");
             });
         });
@@ -216,7 +216,11 @@ impl ProfilerPanel {
         if !profiler.is_enabled() {
             ui.vertical_centered(|ui| {
                 ui.add_space(50.0);
-                ui.label(egui::RichText::new("Profiler is disabled").size(18.0).weak());
+                ui.label(
+                    egui::RichText::new("Profiler is disabled")
+                        .size(18.0)
+                        .weak(),
+                );
                 ui.label("Enable profiling to see performance metrics.");
             });
             return;
@@ -234,7 +238,11 @@ impl ProfilerPanel {
                 } else {
                     egui::Color32::RED
                 };
-                ui.label(egui::RichText::new(format!("{:.1}", fps)).size(32.0).color(fps_color));
+                ui.label(
+                    egui::RichText::new(format!("{:.1}", fps))
+                        .size(32.0)
+                        .color(fps_color),
+                );
             });
 
             ui.vertical(|ui| {
@@ -247,7 +255,11 @@ impl ProfilerPanel {
                 } else {
                     egui::Color32::RED
                 };
-                ui.label(egui::RichText::new(format!("{:.2} ms", frame_time)).size(32.0).color(ft_color));
+                ui.label(
+                    egui::RichText::new(format!("{:.2} ms", frame_time))
+                        .size(32.0)
+                        .color(ft_color),
+                );
             });
 
             ui.vertical(|ui| {
@@ -272,7 +284,7 @@ impl ProfilerPanel {
         // Budget status summary
         ui.heading("Budget Status");
         let statuses = profiler.all_budget_statuses();
-        
+
         egui::Grid::new("budget_status_grid")
             .num_columns(3)
             .spacing([20.0, 4.0])
@@ -299,10 +311,8 @@ impl ProfilerPanel {
         let available_width = ui.available_width();
         let height = 100.0;
 
-        let (rect, _response) = ui.allocate_exact_size(
-            egui::vec2(available_width, height),
-            egui::Sense::hover(),
-        );
+        let (rect, _response) =
+            ui.allocate_exact_size(egui::vec2(available_width, height), egui::Sense::hover());
 
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
@@ -311,28 +321,42 @@ impl ProfilerPanel {
             painter.rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);
 
             if self.frame_time_history.len() >= 2 {
-                let max_time = self.frame_time_history.iter().copied().fold(0.0, f32::max).max(33.0);
-                
+                let max_time = self
+                    .frame_time_history
+                    .iter()
+                    .copied()
+                    .fold(0.0, f32::max)
+                    .max(33.0);
+
                 // Draw 60fps line (16.67ms)
                 let fps60_y = rect.bottom() - (16.67 / max_time) * rect.height();
                 painter.line_segment(
-                    [egui::pos2(rect.left(), fps60_y), egui::pos2(rect.right(), fps60_y)],
+                    [
+                        egui::pos2(rect.left(), fps60_y),
+                        egui::pos2(rect.right(), fps60_y),
+                    ],
                     egui::Stroke::new(1.0, egui::Color32::GREEN.gamma_multiply(0.3)),
                 );
-                
+
                 // Draw 30fps line (33.33ms)
                 let fps30_y = rect.bottom() - (33.33 / max_time) * rect.height();
                 painter.line_segment(
-                    [egui::pos2(rect.left(), fps30_y), egui::pos2(rect.right(), fps30_y)],
+                    [
+                        egui::pos2(rect.left(), fps30_y),
+                        egui::pos2(rect.right(), fps30_y),
+                    ],
                     egui::Stroke::new(1.0, egui::Color32::YELLOW.gamma_multiply(0.3)),
                 );
 
                 // Draw frame time line
-                let points: Vec<_> = self.frame_time_history
+                let points: Vec<_> = self
+                    .frame_time_history
                     .iter()
                     .enumerate()
                     .map(|(i, &time)| {
-                        let x = rect.left() + (i as f32 / (self.frame_time_history.len() - 1) as f32) * rect.width();
+                        let x = rect.left()
+                            + (i as f32 / (self.frame_time_history.len() - 1) as f32)
+                                * rect.width();
                         let y = rect.bottom() - (time / max_time) * rect.height();
                         egui::pos2(x, y)
                     })
@@ -346,10 +370,7 @@ impl ProfilerPanel {
                     } else {
                         egui::Color32::GREEN
                     };
-                    painter.line_segment(
-                        [points[i], points[i + 1]],
-                        egui::Stroke::new(2.0, color),
-                    );
+                    painter.line_segment([points[i], points[i + 1]], egui::Stroke::new(2.0, color));
                 }
             }
 
@@ -373,13 +394,13 @@ impl ProfilerPanel {
 
         ui.heading("System Performance");
         ui.label("Per-system timing and budget compliance.");
-        
+
         ui.add_space(10.0);
 
         // System breakdown would go here
         // For now, show budget statuses
         let statuses = profiler.all_budget_statuses();
-        
+
         for (system, status) in statuses {
             egui::Frame::group(ui.style()).show(ui, |ui| {
                 ui.set_width(ui.available_width());
@@ -429,10 +450,8 @@ impl ProfilerPanel {
         let available_width = ui.available_width();
         let height = 100.0;
 
-        let (rect, _response) = ui.allocate_exact_size(
-            egui::vec2(available_width, height),
-            egui::Sense::hover(),
-        );
+        let (rect, _response) =
+            ui.allocate_exact_size(egui::vec2(available_width, height), egui::Sense::hover());
 
         if ui.is_rect_visible(rect) && self.memory_history.len() >= 2 {
             let painter = ui.painter();
@@ -440,14 +459,21 @@ impl ProfilerPanel {
             // Background
             painter.rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);
 
-            let max_mem = self.memory_history.iter().copied().fold(0.0, f32::max).max(100.0);
+            let max_mem = self
+                .memory_history
+                .iter()
+                .copied()
+                .fold(0.0, f32::max)
+                .max(100.0);
 
             // Draw memory line
-            let points: Vec<_> = self.memory_history
+            let points: Vec<_> = self
+                .memory_history
                 .iter()
                 .enumerate()
                 .map(|(i, &mem)| {
-                    let x = rect.left() + (i as f32 / (self.memory_history.len() - 1) as f32) * rect.width();
+                    let x = rect.left()
+                        + (i as f32 / (self.memory_history.len() - 1) as f32) * rect.width();
                     let y = rect.bottom() - (mem / max_mem) * rect.height();
                     egui::pos2(x, y)
                 })
@@ -475,9 +501,9 @@ impl ProfilerPanel {
     fn draw_advanced_tab(&mut self, ui: &mut egui::Ui, _profiler: &dyn ProfilerInterface) {
         ui.heading("Advanced Metrics");
         ui.label("Hierarchical profiling and GPU timing.");
-        
+
         ui.add_space(10.0);
-        
+
         ui.label("(Advanced profiling data would appear here)");
         ui.label("- Hierarchical call tree");
         ui.label("- GPU timing");
@@ -599,11 +625,11 @@ mod tests {
     #[test]
     fn test_mock_profiler() {
         let mut profiler = MockProfiler::new();
-        
+
         assert!(profiler.is_enabled());
         assert_eq!(profiler.fps(), 60.0);
         assert_eq!(profiler.entity_count(), 100);
-        
+
         profiler.toggle();
         assert!(!profiler.is_enabled());
     }

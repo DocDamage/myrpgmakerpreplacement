@@ -45,7 +45,8 @@ impl Keyframe {
     /// Interpolate between this keyframe and the next
     pub fn interpolate(&self, next: &Keyframe, t: f32) -> TrackValue {
         let eased_t = self.easing.apply(t);
-        self.interpolation.interpolate(&self.value, &next.value, eased_t)
+        self.interpolation
+            .interpolate(&self.value, &next.value, eased_t)
     }
 }
 
@@ -71,7 +72,10 @@ impl Interpolation {
         match self {
             Interpolation::Step => from.clone(),
             Interpolation::Linear => TrackValue::lerp(from, to, t),
-            Interpolation::Bezier { control_in, control_out } => {
+            Interpolation::Bezier {
+                control_in,
+                control_out,
+            } => {
                 let bezier_t = Self::cubic_bezier(t, *control_in, *control_out);
                 TrackValue::lerp(from, to, bezier_t)
             }
@@ -83,13 +87,13 @@ impl Interpolation {
         // Simplified cubic bezier with control points (0, p1) and (1, p2)
         let p0 = 0.0f32;
         let p3 = 1.0f32;
-        
+
         let one_minus_t = 1.0 - t;
         let one_minus_t2 = one_minus_t * one_minus_t;
         let one_minus_t3 = one_minus_t2 * one_minus_t;
         let t2 = t * t;
         let t3 = t2 * t;
-        
+
         one_minus_t3 * p0 + 3.0 * one_minus_t2 * t * p1 + 3.0 * one_minus_t * t2 * p2 + t3 * p3
     }
 }
@@ -218,7 +222,7 @@ impl EasingFunction {
     fn ease_out_bounce(t: f32) -> f32 {
         let n1 = 7.5625;
         let d1 = 2.75;
-        
+
         if t < 1.0 / d1 {
             n1 * t * t
         } else if t < 2.0 / d1 {
@@ -301,12 +305,16 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
-    pub const ZERO: Self = Self { x: 0.0, y: 0.0, z: 0.0 };
-    
+    pub const ZERO: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
-    
+
     pub fn lerp(self, other: Self, t: f32) -> Self {
         Self {
             x: self.x + (other.x - self.x) * t,
@@ -318,7 +326,11 @@ impl Vec3 {
 
 impl From<glam::Vec3> for Vec3 {
     fn from(v: glam::Vec3) -> Self {
-        Self { x: v.x, y: v.y, z: v.z }
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
     }
 }
 
@@ -343,7 +355,11 @@ impl<'de> serde::Deserialize<'de> for Vec3 {
         D: serde::Deserializer<'de>,
     {
         let arr: [f32; 3] = serde::Deserialize::deserialize(deserializer)?;
-        Ok(Self { x: arr[0], y: arr[1], z: arr[2] })
+        Ok(Self {
+            x: arr[0],
+            y: arr[1],
+            z: arr[2],
+        })
     }
 }
 
@@ -405,9 +421,17 @@ impl EntityValue {
     fn lerp(from: &EntityValue, to: &EntityValue, t: f32) -> EntityValue {
         EntityValue {
             position: from.position.lerp(to.position, t),
-            animation_id: if t >= 1.0 { to.animation_id } else { from.animation_id },
+            animation_id: if t >= 1.0 {
+                to.animation_id
+            } else {
+                from.animation_id
+            },
             visible: if t >= 0.5 { to.visible } else { from.visible },
-            direction: if t >= 0.5 { to.direction } else { from.direction },
+            direction: if t >= 0.5 {
+                to.direction
+            } else {
+                from.direction
+            },
         }
     }
 }
@@ -478,7 +502,11 @@ impl Default for EffectValue {
 impl EffectValue {
     fn lerp(from: &EffectValue, to: &EffectValue, t: f32) -> EffectValue {
         EffectValue {
-            effect_type: if t >= 0.5 { to.effect_type } else { from.effect_type },
+            effect_type: if t >= 0.5 {
+                to.effect_type
+            } else {
+                from.effect_type
+            },
             intensity: from.intensity + (to.intensity - from.intensity) * t,
             color: [
                 from.color[0] + (to.color[0] - from.color[0]) * t,
@@ -584,7 +612,7 @@ mod tests {
                 fade_alpha: 0.0,
             }),
         );
-        
+
         let kf2 = Keyframe::new(
             1.0,
             TrackValue::Camera(CameraValue {

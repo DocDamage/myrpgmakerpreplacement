@@ -183,16 +183,30 @@ pub enum AnimationTarget {
 /// Compiled condition for branches
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Condition {
-    HasItem { item_id: u32, quantity: u32 },
+    HasItem {
+        item_id: u32,
+        quantity: u32,
+    },
     StatCheck {
         stat: StatType,
         operator: CompareOp,
         value: i32,
     },
-    QuestStage { quest_id: u32, stage: u32 },
-    TimeOfDay { min_hour: u8, max_hour: u8 },
-    RandomChance { percent: u8 },
-    GameFlag { flag_key: String, expected: bool },
+    QuestStage {
+        quest_id: u32,
+        stage: u32,
+    },
+    TimeOfDay {
+        min_hour: u8,
+        max_hour: u8,
+    },
+    RandomChance {
+        percent: u8,
+    },
+    GameFlag {
+        flag_key: String,
+        expected: bool,
+    },
     Compare {
         left: ValueSource,
         operator: CompareOp,
@@ -264,7 +278,10 @@ impl<'a> Compiler<'a> {
         }
         self.visiting.insert(node_id);
 
-        let node = self.graph.nodes.get(&node_id)
+        let node = self
+            .graph
+            .nodes
+            .get(&node_id)
             .ok_or(CompileError::OrphanedNode(node_id))?
             .clone();
 
@@ -301,79 +318,73 @@ impl<'a> Compiler<'a> {
             }
 
             // Direct action nodes
-            NodeType::MoveEntity { x, y, relative } => {
-                Ok(GameEvent::MoveEntity {
-                    entity_ref: EntityRef::SelfEntity,
-                    x: *x,
-                    y: *y,
-                    relative: *relative,
-                })
-            }
+            NodeType::MoveEntity { x, y, relative } => Ok(GameEvent::MoveEntity {
+                entity_ref: EntityRef::SelfEntity,
+                x: *x,
+                y: *y,
+                relative: *relative,
+            }),
             NodeType::PlayAnimation { anim_id, target } => {
                 let target = match target {
                     super::nodes::AnimationTarget::SelfEntity => AnimationTarget::SelfEntity,
                     super::nodes::AnimationTarget::Player => AnimationTarget::Player,
                     super::nodes::AnimationTarget::Target => AnimationTarget::Target,
                 };
-                Ok(GameEvent::PlayAnimation { anim_id: *anim_id, target })
-            }
-            NodeType::StartBattle { encounter_id, transition } => {
-                Ok(GameEvent::StartBattle {
-                    encounter_id: *encounter_id,
-                    transition: transition.clone(),
+                Ok(GameEvent::PlayAnimation {
+                    anim_id: *anim_id,
+                    target,
                 })
             }
-            NodeType::ShowDialogue { text, speaker, portrait } => {
-                Ok(GameEvent::ShowDialogue {
-                    text: text.clone(),
-                    speaker: speaker.clone(),
-                    portrait: *portrait,
-                })
-            }
-            NodeType::ModifyVariable { name, operation, value } => {
-                Ok(GameEvent::ModifyVariable {
-                    name: name.clone(),
-                    operation: *operation,
-                    value: *value,
-                })
-            }
-            NodeType::GiveItem { item_id, quantity } => {
-                Ok(GameEvent::GiveItem {
-                    item_id: *item_id,
-                    quantity: *quantity,
-                })
-            }
-            NodeType::RemoveItem { item_id, quantity } => {
-                Ok(GameEvent::RemoveItem {
-                    item_id: *item_id,
-                    quantity: *quantity,
-                })
-            }
-            NodeType::Teleport { map_id, x, y } => {
-                Ok(GameEvent::Teleport {
-                    map_id: *map_id,
-                    x: *x,
-                    y: *y,
-                })
-            }
-            NodeType::PlaySfx { sound_id } => {
-                Ok(GameEvent::PlaySfx {
-                    sound_id: sound_id.clone(),
-                })
-            }
-            NodeType::ChangeBgm { bgm_id, fade_ms } => {
-                Ok(GameEvent::ChangeBgm {
-                    bgm_id: bgm_id.clone(),
-                    fade_ms: *fade_ms,
-                })
-            }
-            NodeType::SpawnEntity { template_id, x, y } => {
-                Ok(GameEvent::SpawnEntity {
-                    template_id: *template_id,
-                    x: *x,
-                    y: *y,
-                })
-            }
+            NodeType::StartBattle {
+                encounter_id,
+                transition,
+            } => Ok(GameEvent::StartBattle {
+                encounter_id: *encounter_id,
+                transition: transition.clone(),
+            }),
+            NodeType::ShowDialogue {
+                text,
+                speaker,
+                portrait,
+            } => Ok(GameEvent::ShowDialogue {
+                text: text.clone(),
+                speaker: speaker.clone(),
+                portrait: *portrait,
+            }),
+            NodeType::ModifyVariable {
+                name,
+                operation,
+                value,
+            } => Ok(GameEvent::ModifyVariable {
+                name: name.clone(),
+                operation: *operation,
+                value: *value,
+            }),
+            NodeType::GiveItem { item_id, quantity } => Ok(GameEvent::GiveItem {
+                item_id: *item_id,
+                quantity: *quantity,
+            }),
+            NodeType::RemoveItem { item_id, quantity } => Ok(GameEvent::RemoveItem {
+                item_id: *item_id,
+                quantity: *quantity,
+            }),
+            NodeType::Teleport { map_id, x, y } => Ok(GameEvent::Teleport {
+                map_id: *map_id,
+                x: *x,
+                y: *y,
+            }),
+            NodeType::PlaySfx { sound_id } => Ok(GameEvent::PlaySfx {
+                sound_id: sound_id.clone(),
+            }),
+            NodeType::ChangeBgm { bgm_id, fade_ms } => Ok(GameEvent::ChangeBgm {
+                bgm_id: bgm_id.clone(),
+                fade_ms: *fade_ms,
+            }),
+            NodeType::SpawnEntity { template_id, x, y } => Ok(GameEvent::SpawnEntity {
+                template_id: *template_id,
+                x: *x,
+                y: *y,
+            }),
             NodeType::DespawnEntity { entity_ref } => {
                 let entity_ref = match entity_ref {
                     super::nodes::EntityRef::SelfEntity => EntityRef::SelfEntity,
@@ -383,31 +394,32 @@ impl<'a> Compiler<'a> {
                 };
                 Ok(GameEvent::DespawnEntity { entity_ref })
             }
-            NodeType::SetGameFlag { flag_key, value } => {
-                Ok(GameEvent::SetGameFlag {
-                    flag_key: flag_key.clone(),
-                    value: *value,
-                })
-            }
-            NodeType::StartQuest { quest_id } => {
-                Ok(GameEvent::StartQuest { quest_id: *quest_id })
-            }
-            NodeType::UpdateQuest { quest_id, objective_id, progress } => {
-                Ok(GameEvent::UpdateQuest {
-                    quest_id: *quest_id,
-                    objective_id: *objective_id,
-                    progress: *progress,
-                })
-            }
-            NodeType::CompleteQuest { quest_id } => {
-                Ok(GameEvent::CompleteQuest { quest_id: *quest_id })
-            }
-            NodeType::ShowNotification { text, duration_secs } => {
-                Ok(GameEvent::ShowNotification {
-                    text: text.clone(),
-                    duration_secs: *duration_secs,
-                })
-            }
+            NodeType::SetGameFlag { flag_key, value } => Ok(GameEvent::SetGameFlag {
+                flag_key: flag_key.clone(),
+                value: *value,
+            }),
+            NodeType::StartQuest { quest_id } => Ok(GameEvent::StartQuest {
+                quest_id: *quest_id,
+            }),
+            NodeType::UpdateQuest {
+                quest_id,
+                objective_id,
+                progress,
+            } => Ok(GameEvent::UpdateQuest {
+                quest_id: *quest_id,
+                objective_id: *objective_id,
+                progress: *progress,
+            }),
+            NodeType::CompleteQuest { quest_id } => Ok(GameEvent::CompleteQuest {
+                quest_id: *quest_id,
+            }),
+            NodeType::ShowNotification {
+                text,
+                duration_secs,
+            } => Ok(GameEvent::ShowNotification {
+                text: text.clone(),
+                duration_secs: *duration_secs,
+            }),
             NodeType::ModifyHealth { target, amount } => {
                 let target = match target {
                     super::nodes::EntityRef::SelfEntity => EntityRef::SelfEntity,
@@ -415,7 +427,10 @@ impl<'a> Compiler<'a> {
                     super::nodes::EntityRef::Target => EntityRef::Target,
                     super::nodes::EntityRef::ById(id) => EntityRef::ById(*id),
                 };
-                Ok(GameEvent::ModifyHealth { target, amount: *amount })
+                Ok(GameEvent::ModifyHealth {
+                    target,
+                    amount: *amount,
+                })
             }
             NodeType::GrantExp { target, amount } => {
                 let target = match target {
@@ -424,75 +439,82 @@ impl<'a> Compiler<'a> {
                     super::nodes::EntityRef::Target => EntityRef::Target,
                     super::nodes::EntityRef::ById(id) => EntityRef::ById(*id),
                 };
-                Ok(GameEvent::GrantExp { target, amount: *amount })
+                Ok(GameEvent::GrantExp {
+                    target,
+                    amount: *amount,
+                })
             }
-            NodeType::Delay { seconds } => {
-                Ok(GameEvent::Delay { seconds: *seconds })
-            }
+            NodeType::Delay { seconds } => Ok(GameEvent::Delay { seconds: *seconds }),
 
             // Flow control nodes
-            NodeType::Branch => {
-                self.compile_branch_node(&node)
-            }
+            NodeType::Branch => self.compile_branch_node(&node),
             NodeType::Loop { count } => {
                 let body = self.compile_execution_chain(node_id)?;
-                Ok(GameEvent::Loop { count: *count, body })
+                Ok(GameEvent::Loop {
+                    count: *count,
+                    body,
+                })
             }
-            NodeType::WhileLoop => {
-                self.compile_while_loop_node(&node)
-            }
+            NodeType::WhileLoop => self.compile_while_loop_node(&node),
             NodeType::Sequence => {
                 let events = self.compile_execution_chain(node_id)?;
                 Ok(GameEvent::Sequence { events })
             }
-            NodeType::Parallel => {
-                self.compile_parallel_node(&node)
-            }
+            NodeType::Parallel => self.compile_parallel_node(&node),
             NodeType::Break => Ok(GameEvent::Break),
             NodeType::Continue => Ok(GameEvent::Continue),
 
             // Condition nodes - compile as condition expressions
-            NodeType::HasItem { item_id: _, quantity: _ } => {
+            NodeType::HasItem {
+                item_id: _,
+                quantity: _,
+            } => {
                 // This should be used in a Branch node context
                 Err(CompileError::UnsupportedNodeType(
-                    "HasItem must be connected to Branch condition pin".to_string()
+                    "HasItem must be connected to Branch condition pin".to_string(),
                 ))
             }
-            NodeType::StatCheck { stat: _, operator: _, value: _ } => {
-                Err(CompileError::UnsupportedNodeType(
-                    "StatCheck must be connected to Branch condition pin".to_string()
-                ))
-            }
-            NodeType::QuestStage { quest_id: _, stage: _ } => {
-                Err(CompileError::UnsupportedNodeType(
-                    "QuestStage must be connected to Branch condition pin".to_string()
-                ))
-            }
-            NodeType::TimeOfDay { min_hour: _, max_hour: _ } => {
-                Err(CompileError::UnsupportedNodeType(
-                    "TimeOfDay must be connected to Branch condition pin".to_string()
-                ))
-            }
-            NodeType::RandomChance { percent: _ } => {
-                Err(CompileError::UnsupportedNodeType(
-                    "RandomChance must be connected to Branch condition pin".to_string()
-                ))
-            }
-            NodeType::GameFlag { flag_key: _flag_key, expected: _expected } => {
-                Err(CompileError::UnsupportedNodeType(
-                    "GameFlag must be connected to Branch condition pin".to_string()
-                ))
-            }
-            NodeType::Compare { left: _, operator: _, right: _ } => {
-                Err(CompileError::UnsupportedNodeType(
-                    "Compare must be connected to Branch condition pin".to_string()
-                ))
-            }
+            NodeType::StatCheck {
+                stat: _,
+                operator: _,
+                value: _,
+            } => Err(CompileError::UnsupportedNodeType(
+                "StatCheck must be connected to Branch condition pin".to_string(),
+            )),
+            NodeType::QuestStage {
+                quest_id: _,
+                stage: _,
+            } => Err(CompileError::UnsupportedNodeType(
+                "QuestStage must be connected to Branch condition pin".to_string(),
+            )),
+            NodeType::TimeOfDay {
+                min_hour: _,
+                max_hour: _,
+            } => Err(CompileError::UnsupportedNodeType(
+                "TimeOfDay must be connected to Branch condition pin".to_string(),
+            )),
+            NodeType::RandomChance { percent: _ } => Err(CompileError::UnsupportedNodeType(
+                "RandomChance must be connected to Branch condition pin".to_string(),
+            )),
+            NodeType::GameFlag {
+                flag_key: _flag_key,
+                expected: _expected,
+            } => Err(CompileError::UnsupportedNodeType(
+                "GameFlag must be connected to Branch condition pin".to_string(),
+            )),
+            NodeType::Compare {
+                left: _,
+                operator: _,
+                right: _,
+            } => Err(CompileError::UnsupportedNodeType(
+                "Compare must be connected to Branch condition pin".to_string(),
+            )),
 
             // Variable and math nodes - need to be used as inputs
-            _ => Err(CompileError::UnsupportedNodeType(
-                format!("Node type {:?} cannot be compiled directly", node.node_type)
-            )),
+            _ => Err(CompileError::UnsupportedNodeType(format!(
+                "Node type {:?} cannot be compiled directly",
+                node.node_type
+            ))),
         }
     }
 
@@ -508,13 +530,17 @@ impl<'a> Compiler<'a> {
             visited_in_chain.insert(current_id);
 
             // Get the execution output connections
-            let connections: Vec<_> = self.graph.get_connections_from(current_id, 
-                self.get_execution_output_pin(current_id)?)
+            let connections: Vec<_> = self
+                .graph
+                .get_connections_from(current_id, self.get_execution_output_pin(current_id)?)
                 .into_iter()
                 .filter(|c| {
                     // Check if the target is an execution input
                     if let Some(target_node) = self.graph.nodes.get(&c.target_node) {
-                        target_node.inputs.iter().any(|p| p.id == c.target_pin && p.pin_type == PinType::Execution)
+                        target_node
+                            .inputs
+                            .iter()
+                            .any(|p| p.id == c.target_pin && p.pin_type == PinType::Execution)
                     } else {
                         false
                     }
@@ -528,7 +554,10 @@ impl<'a> Compiler<'a> {
 
             // For a linear chain, follow the first execution output
             let conn = &connections[0];
-            let next_node = self.graph.nodes.get(&conn.target_node)
+            let next_node = self
+                .graph
+                .nodes
+                .get(&conn.target_node)
                 .ok_or(CompileError::InvalidConnection(conn.target_node))?;
 
             // Compile this node
@@ -594,7 +623,9 @@ impl<'a> Compiler<'a> {
 
         // Find all output connections
         for output in &node.outputs {
-            let output_connections: Vec<_> = self.graph.connections
+            let output_connections: Vec<_> = self
+                .graph
+                .connections
                 .iter()
                 .filter(|c| c.source_node == node.id && c.source_pin == output.id)
                 .collect();
@@ -631,36 +662,54 @@ impl<'a> Compiler<'a> {
 
     fn compile_condition_node(&mut self, node: &Node) -> CompileResult<Condition> {
         match &node.node_type {
-            NodeType::HasItem { item_id, quantity } => {
-                Ok(Condition::HasItem { item_id: *item_id, quantity: *quantity })
-            }
-            NodeType::StatCheck { stat, operator, value } => {
-                Ok(Condition::StatCheck { stat: *stat, operator: *operator, value: *value })
-            }
-            NodeType::QuestStage { quest_id, stage } => {
-                Ok(Condition::QuestStage { quest_id: *quest_id, stage: *stage })
-            }
-            NodeType::TimeOfDay { min_hour, max_hour } => {
-                Ok(Condition::TimeOfDay { min_hour: *min_hour, max_hour: *max_hour })
-            }
-            NodeType::RandomChance { percent } => {
-                Ok(Condition::RandomChance { percent: *percent })
-            }
-            NodeType::GameFlag { flag_key, expected } => {
-                Ok(Condition::GameFlag { flag_key: flag_key.clone(), expected: *expected })
-            }
-            NodeType::Compare { left, operator, right } => {
-                Ok(Condition::Compare { left: left.clone(), operator: *operator, right: right.clone() })
-            }
+            NodeType::HasItem { item_id, quantity } => Ok(Condition::HasItem {
+                item_id: *item_id,
+                quantity: *quantity,
+            }),
+            NodeType::StatCheck {
+                stat,
+                operator,
+                value,
+            } => Ok(Condition::StatCheck {
+                stat: *stat,
+                operator: *operator,
+                value: *value,
+            }),
+            NodeType::QuestStage { quest_id, stage } => Ok(Condition::QuestStage {
+                quest_id: *quest_id,
+                stage: *stage,
+            }),
+            NodeType::TimeOfDay { min_hour, max_hour } => Ok(Condition::TimeOfDay {
+                min_hour: *min_hour,
+                max_hour: *max_hour,
+            }),
+            NodeType::RandomChance { percent } => Ok(Condition::RandomChance { percent: *percent }),
+            NodeType::GameFlag { flag_key, expected } => Ok(Condition::GameFlag {
+                flag_key: flag_key.clone(),
+                expected: *expected,
+            }),
+            NodeType::Compare {
+                left,
+                operator,
+                right,
+            } => Ok(Condition::Compare {
+                left: left.clone(),
+                operator: *operator,
+                right: right.clone(),
+            }),
             _ => {
-                self.warnings.push(format!("Node {:?} is not a valid condition", node.id));
+                self.warnings
+                    .push(format!("Node {:?} is not a valid condition", node.id));
                 Ok(Condition::Literal(true))
             }
         }
     }
 
     fn get_execution_output_pin(&self, node_id: NodeId) -> CompileResult<PinId> {
-        let node = self.graph.nodes.get(&node_id)
+        let node = self
+            .graph
+            .nodes
+            .get(&node_id)
             .ok_or(CompileError::OrphanedNode(node_id))?;
 
         node.exec_outputs()
@@ -677,50 +726,44 @@ pub fn to_engine_events(events: &[GameEvent]) -> Vec<EngineEvent> {
 
 fn convert_to_engine_event(event: &GameEvent) -> Option<EngineEvent> {
     match event {
-        GameEvent::ShowDialogue {   .. } => {
+        GameEvent::ShowDialogue { .. } => {
             Some(EngineEvent::DialogueStarted {
                 npc: hecs::Entity::DANGLING, // Placeholder
                 tree_id: None,
             })
         }
-        GameEvent::StartBattle {  .. } => {
-            Some(EngineEvent::BattleTriggered {
-                enemies: vec![],
-                terrain: "default".to_string(),
-            })
-        }
-        GameEvent::Teleport { map_id, x: _x, y: _y } => {
-            Some(EngineEvent::SubMapEntered {
-                entity: hecs::Entity::DANGLING,
-                sub_map_id: *map_id,
-            })
-        }
-        GameEvent::PlaySfx { sound_id } => {
-            Some(EngineEvent::SfxPlay {
-                sound_id: sound_id.clone(),
-                position: None,
-            })
-        }
-        GameEvent::ChangeBgm { bgm_id, .. } => {
-            Some(EngineEvent::BgmChange {
-                stem_set_id: bgm_id.clone(),
-            })
-        }
-        GameEvent::ModifyHealth { amount, .. } => {
-            Some(EngineEvent::DamageDealt {
-                source: hecs::Entity::DANGLING,
-                target: hecs::Entity::DANGLING,
-                amount: *amount,
-                element: dde_core::Element::None,
-                is_crit: false,
-            })
-        }
-        GameEvent::StartQuest { quest_id } => {
-            Some(EngineEvent::QuestStarted { quest_id: *quest_id })
-        }
-        GameEvent::CompleteQuest { quest_id } => {
-            Some(EngineEvent::QuestCompleted { quest_id: *quest_id })
-        }
+        GameEvent::StartBattle { .. } => Some(EngineEvent::BattleTriggered {
+            enemies: vec![],
+            terrain: "default".to_string(),
+        }),
+        GameEvent::Teleport {
+            map_id,
+            x: _x,
+            y: _y,
+        } => Some(EngineEvent::SubMapEntered {
+            entity: hecs::Entity::DANGLING,
+            sub_map_id: *map_id,
+        }),
+        GameEvent::PlaySfx { sound_id } => Some(EngineEvent::SfxPlay {
+            sound_id: sound_id.clone(),
+            position: None,
+        }),
+        GameEvent::ChangeBgm { bgm_id, .. } => Some(EngineEvent::BgmChange {
+            stem_set_id: bgm_id.clone(),
+        }),
+        GameEvent::ModifyHealth { amount, .. } => Some(EngineEvent::DamageDealt {
+            source: hecs::Entity::DANGLING,
+            target: hecs::Entity::DANGLING,
+            amount: *amount,
+            element: dde_core::Element::None,
+            is_crit: false,
+        }),
+        GameEvent::StartQuest { quest_id } => Some(EngineEvent::QuestStarted {
+            quest_id: *quest_id,
+        }),
+        GameEvent::CompleteQuest { quest_id } => Some(EngineEvent::QuestCompleted {
+            quest_id: *quest_id,
+        }),
         _ => None,
     }
 }
@@ -747,9 +790,9 @@ pub fn graph_from_json(json: &str) -> serde_json::Result<NodeGraph> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::canvas::Connection;
     use super::super::nodes::{Node, NodeType, PinType};
+    use super::*;
 
     #[test]
     fn test_compile_simple_chain() {
@@ -757,11 +800,14 @@ mod tests {
 
         // OnInteract -> ShowDialogue
         let event_node = Node::new(NodeType::OnInteract, [0.0, 0.0]);
-        let action_node = Node::new(NodeType::ShowDialogue {
-            text: "Hello!".to_string(),
-            speaker: "NPC".to_string(),
-            portrait: None,
-        }, [200.0, 0.0]);
+        let action_node = Node::new(
+            NodeType::ShowDialogue {
+                text: "Hello!".to_string(),
+                speaker: "NPC".to_string(),
+                portrait: None,
+            },
+            [200.0, 0.0],
+        );
 
         let event_id = graph.add_node(event_node);
         let action_id = graph.add_node(action_node);
@@ -786,16 +832,22 @@ mod tests {
         // OnInteract -> Branch -> [ShowDialogue True, ShowDialogue False]
         let event_node = Node::new(NodeType::OnInteract, [0.0, 0.0]);
         let branch_node = Node::new(NodeType::Branch, [200.0, 0.0]);
-        let true_node = Node::new(NodeType::ShowDialogue {
-            text: "You have it!".to_string(),
-            speaker: "NPC".to_string(),
-            portrait: None,
-        }, [400.0, -100.0]);
-        let false_node = Node::new(NodeType::ShowDialogue {
-            text: "You don't have it.".to_string(),
-            speaker: "NPC".to_string(),
-            portrait: None,
-        }, [400.0, 100.0]);
+        let true_node = Node::new(
+            NodeType::ShowDialogue {
+                text: "You have it!".to_string(),
+                speaker: "NPC".to_string(),
+                portrait: None,
+            },
+            [400.0, -100.0],
+        );
+        let false_node = Node::new(
+            NodeType::ShowDialogue {
+                text: "You don't have it.".to_string(),
+                speaker: "NPC".to_string(),
+                portrait: None,
+            },
+            [400.0, 100.0],
+        );
 
         let event_id = graph.add_node(event_node);
         let branch_id = graph.add_node(branch_node);
@@ -804,18 +856,43 @@ mod tests {
 
         // Connect event to branch
         let event_out = graph.nodes[&event_id].outputs[0].id;
-        let branch_in = graph.nodes[&branch_id].inputs.iter().find(|p| p.pin_type == PinType::Execution).unwrap().id;
+        let branch_in = graph.nodes[&branch_id]
+            .inputs
+            .iter()
+            .find(|p| p.pin_type == PinType::Execution)
+            .unwrap()
+            .id;
         graph.add_connection(Connection::new(event_id, event_out, branch_id, branch_in));
 
         // Connect branch True to true_node
-        let branch_true_out = graph.nodes[&branch_id].outputs.iter().find(|p| p.name == "True").unwrap().id;
+        let branch_true_out = graph.nodes[&branch_id]
+            .outputs
+            .iter()
+            .find(|p| p.name == "True")
+            .unwrap()
+            .id;
         let true_in = graph.nodes[&true_id].inputs[0].id;
-        graph.add_connection(Connection::new(branch_id, branch_true_out, true_id, true_in));
+        graph.add_connection(Connection::new(
+            branch_id,
+            branch_true_out,
+            true_id,
+            true_in,
+        ));
 
         // Connect branch False to false_node
-        let branch_false_out = graph.nodes[&branch_id].outputs.iter().find(|p| p.name == "False").unwrap().id;
+        let branch_false_out = graph.nodes[&branch_id]
+            .outputs
+            .iter()
+            .find(|p| p.name == "False")
+            .unwrap()
+            .id;
         let false_in = graph.nodes[&false_id].inputs[0].id;
-        graph.add_connection(Connection::new(branch_id, branch_false_out, false_id, false_in));
+        graph.add_connection(Connection::new(
+            branch_id,
+            branch_false_out,
+            false_id,
+            false_in,
+        ));
 
         let result = compile_to_events(&graph);
         assert!(result.is_ok());

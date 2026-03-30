@@ -6,10 +6,7 @@ use std::sync::Arc;
 
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, RwLock};
-use tokio_tungstenite::{
-    accept_async,
-    tungstenite::Message,
-};
+use tokio_tungstenite::{accept_async, tungstenite::Message};
 use uuid::Uuid;
 
 use crate::{
@@ -108,7 +105,7 @@ impl ProjectSession {
     /// Broadcast a message to all clients except the sender
     pub async fn broadcast(&self, sender: Uuid, msg: SyncMessage) {
         let msg_text = serde_json::to_string(&msg).unwrap_or_default();
-        
+
         for (client_id, client) in &self.clients {
             if *client_id != sender {
                 let _ = client.tx.send(msg_text.clone());
@@ -119,7 +116,7 @@ impl ProjectSession {
     /// Broadcast a message to all clients including the sender
     pub async fn broadcast_all(&self, msg: SyncMessage) {
         let msg_text = serde_json::to_string(&msg).unwrap_or_default();
-        
+
         for client in self.clients.values() {
             let _ = client.tx.send(msg_text.clone());
         }
@@ -159,14 +156,14 @@ impl SyncServer {
     pub async fn start(&mut self) -> Result<()> {
         let listener = TcpListener::bind(self.bind_addr).await?;
         tracing::info!("Sync server listening on {}", self.bind_addr);
-        
+
         self.listener = Some(listener);
-        
+
         if let Some(listener) = &self.listener {
             loop {
                 let (socket, addr) = listener.accept().await?;
                 let state = self.state.clone();
-                
+
                 tokio::spawn(async move {
                     if let Err(e) = handle_client(socket, addr, state).await {
                         tracing::error!("Client handler error: {}", e);
@@ -174,7 +171,7 @@ impl SyncServer {
                 });
             }
         }
-        
+
         Ok(())
     }
 
@@ -191,11 +188,7 @@ impl SyncServer {
 }
 
 /// Handle a single client connection
-async fn handle_client(
-    socket: TcpStream,
-    addr: SocketAddr,
-    state: SharedState,
-) -> Result<()> {
+async fn handle_client(socket: TcpStream, addr: SocketAddr, state: SharedState) -> Result<()> {
     tracing::info!("New connection from {}", addr);
 
     // WebSocket handshake
@@ -216,18 +209,18 @@ async fn handle_client(
 
     // Wait for Hello message
     let hello = match ws_rx.next().await {
-        Some(Ok(Message::Text(text))) => {
-            match serde_json::from_str::<SyncMessage>(&text) {
-                Ok(SyncMessage::Hello { client_id, username, project_id }) => {
-                    (client_id, username, project_id)
-                }
-                _ => {
-                    return Err(SyncError::InvalidMessage(
-                        "Expected Hello message".to_string(),
-                    ));
-                }
+        Some(Ok(Message::Text(text))) => match serde_json::from_str::<SyncMessage>(&text) {
+            Ok(SyncMessage::Hello {
+                client_id,
+                username,
+                project_id,
+            }) => (client_id, username, project_id),
+            _ => {
+                return Err(SyncError::InvalidMessage(
+                    "Expected Hello message".to_string(),
+                ));
             }
-        }
+        },
         _ => {
             return Err(SyncError::Connection(
                 "Failed to receive Hello message".to_string(),
@@ -255,17 +248,19 @@ async fn handle_client(
     // Add client to session
     let collaborators = {
         let mut state_guard = state.write().await;
-        state_guard.client_sessions.insert(client_id, project_id.clone());
-        
+        state_guard
+            .client_sessions
+            .insert(client_id, project_id.clone());
+
         let session = state_guard.get_or_create_session(&project_id);
-        
+
         // Get existing collaborators
         let collaborators: Vec<UserPresence> = session
             .clients
             .values()
             .map(|c| c.presence.clone())
             .collect();
-        
+
         session.add_client(client);
         collaborators
     };
@@ -290,21 +285,19 @@ async fn handle_client(
     // Message loop
     while let Some(msg) = ws_rx.next().await {
         match msg {
-            Ok(Message::Text(text)) => {
-                match serde_json::from_str::<SyncMessage>(&text) {
-                    Ok(sync_msg) => {
-                        handle_message(&state, client_id, &project_id, sync_msg, &tx).await;
-                    }
-                    Err(e) => {
-                        tracing::warn!("Invalid message from {}: {}", client_id, e);
-                        let error = SyncMessage::Error {
-                            code: crate::protocol::ErrorCode::InvalidMessage,
-                            message: format!("Invalid message: {}", e),
-                        };
-                        let _ = tx.send(serde_json::to_string(&error).unwrap_or_default());
-                    }
+            Ok(Message::Text(text)) => match serde_json::from_str::<SyncMessage>(&text) {
+                Ok(sync_msg) => {
+                    handle_message(&state, client_id, &project_id, sync_msg, &tx).await;
                 }
-            }
+                Err(e) => {
+                    tracing::warn!("Invalid message from {}: {}", client_id, e);
+                    let error = SyncMessage::Error {
+                        code: crate::protocol::ErrorCode::InvalidMessage,
+                        message: format!("Invalid message: {}", e),
+                    };
+                    let _ = tx.send(serde_json::to_string(&error).unwrap_or_default());
+                }
+            },
             Ok(Message::Close(_)) => {
                 tracing::info!("Client {} disconnected", client_id);
                 break;
@@ -319,7 +312,7 @@ async fn handle_client(
 
     // Cleanup
     send_task.abort();
-    
+
     let mut state_guard = state.write().await;
     if let Some(session) = state_guard.sessions.get(&project_id) {
         let leave_msg = SyncMessage::ClientLeft { client_id };
@@ -340,7 +333,7 @@ async fn handle_message(
     tx: &mpsc::UnboundedSender<String>,
 ) {
     let state_guard = state.read().await;
-    
+
     let Some(session) = state_guard.sessions.get(project_id) else {
         return;
     };
@@ -350,7 +343,7 @@ async fn handle_message(
             // Apply to CRDT
             // In a real implementation, you'd deserialize the operation
             // and apply it to the appropriate CRDT
-            
+
             // Broadcast to other clients
             let broadcast_msg = SyncMessage::Operation {
                 client_id,
@@ -378,7 +371,9 @@ async fn handle_message(
             session.broadcast(client_id, broadcast_msg).await;
         }
 
-        SyncMessage::SelectionChange { selected_entities, .. } => {
+        SyncMessage::SelectionChange {
+            selected_entities, ..
+        } => {
             // Update presence
             let mut state_guard = state.write().await;
             if let Some(session) = state_guard.sessions.get_mut(project_id) {
@@ -400,29 +395,30 @@ async fn handle_message(
             let (lock_acquired, holder) = {
                 let mut state_guard = state.write().await;
                 let session = state_guard.sessions.get_mut(project_id).unwrap();
-                
+
                 let Some(client) = session.get_client(client_id) else {
                     return;
                 };
-                
-                let acquired = session
-                    .lock_manager
-                    .try_lock(entity_id, client_id, &client.username);
-                
+
+                let acquired =
+                    session
+                        .lock_manager
+                        .try_lock(entity_id, client_id, &client.username);
+
                 let holder = if !acquired {
                     session.lock_manager.get_lock_holder(entity_id)
                 } else {
                     None
                 };
-                
+
                 (acquired, holder)
             };
-            
+
             if lock_acquired {
                 // Lock granted
                 let granted = SyncMessage::LockGranted { entity_id };
                 let _ = tx.send(serde_json::to_string(&granted).unwrap_or_default());
-                
+
                 // Notify others
                 let state_guard = state.read().await;
                 if let Some(session) = state_guard.sessions.get(project_id) {
@@ -452,7 +448,7 @@ async fn handle_message(
                 let session = state_guard.sessions.get_mut(project_id).unwrap();
                 session.lock_manager.unlock(entity_id, client_id)
             };
-            
+
             if unlocked_success {
                 // Notify others
                 let state_guard = state.read().await;
@@ -466,7 +462,9 @@ async fn handle_message(
             }
         }
 
-        SyncMessage::ChatMessage { text, timestamp, .. } => {
+        SyncMessage::ChatMessage {
+            text, timestamp, ..
+        } => {
             let state_guard = state.read().await;
             if let Some(session) = state_guard.sessions.get(project_id) {
                 if let Some(client) = session.get_client(client_id) {
@@ -484,12 +482,76 @@ async fn handle_message(
         SyncMessage::RequestSync => {
             // Send current project state
             let state_guard = state.read().await;
-            if state_guard.sessions.contains_key(project_id) {
+            if let Some(session) = state_guard.sessions.get(project_id) {
+                // Serialize entities from CRDT state
+                let entities: Vec<crate::protocol::EntityState> = session
+                    .crdt_state
+                    .entities
+                    .iter()
+                    .filter_map(|(entity, register)| {
+                        register
+                            .value()
+                            .map(|component| crate::protocol::EntityState {
+                                entity_id: *entity,
+                                components: vec![component.clone()],
+                            })
+                    })
+                    .collect();
+
+                // Serialize tile maps from CRDT state
+                let tile_maps: Vec<crate::protocol::TileMapState> = session
+                    .crdt_state
+                    .tile_maps
+                    .iter()
+                    .fold(HashMap::new(), |mut acc, ((map_id, x, y, z), register)| {
+                        if let Some(tile_id) = register.value() {
+                            let entry = acc.entry(*map_id).or_insert_with(|| {
+                                let mut layers: HashMap<i32, Vec<crate::protocol::TileData>> =
+                                    HashMap::new();
+                                layers.insert(*z, Vec::new());
+                                (0i32, 0i32, layers) // width, height will be calculated
+                            });
+
+                            // Track max dimensions
+                            entry.0 = entry.0.max(*x + 1);
+                            entry.1 = entry.1.max(*y + 1);
+
+                            // Add tile to appropriate layer
+                            entry
+                                .2
+                                .entry(*z)
+                                .or_default()
+                                .push(crate::protocol::TileData {
+                                    x: *x,
+                                    y: *y,
+                                    tile_id: *tile_id,
+                                });
+                        }
+                        acc
+                    })
+                    .into_iter()
+                    .map(
+                        |(map_id, (width, height, layers))| crate::protocol::TileMapState {
+                            map_id,
+                            width,
+                            height,
+                            layers: layers
+                                .into_iter()
+                                .map(|(layer_id, tiles)| crate::protocol::TileLayerState {
+                                    layer_id: layer_id as u32,
+                                    z: layer_id,
+                                    tiles,
+                                })
+                                .collect(),
+                        },
+                    )
+                    .collect();
+
                 let sync_state = SyncMessage::SyncState {
                     state: crate::protocol::ProjectState {
                         project_id: project_id.to_string(),
-                        entities: Vec::new(), // TODO: serialize from CRDT
-                        tile_maps: Vec::new(),
+                        entities,
+                        tile_maps,
                         timestamp: current_timestamp(),
                     },
                 };

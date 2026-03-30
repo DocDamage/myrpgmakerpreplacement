@@ -33,7 +33,10 @@ impl BattleState {
 
     /// Check if the battle is finished (victory, defeat, or flee)
     pub fn is_finished(&self) -> bool {
-        matches!(self, BattleState::Victory | BattleState::Defeat | BattleState::Flee)
+        matches!(
+            self,
+            BattleState::Victory | BattleState::Defeat | BattleState::Flee
+        )
     }
 
     /// Check if the battle is currently active
@@ -174,10 +177,7 @@ mod tests {
     use dde_core::World;
 
     fn create_test_combatant(world: &mut World, speed: i32) -> Entity {
-        world.spawn((
-            Combatant,
-            AtbGauge::from_speed(speed),
-        ))
+        world.spawn((Combatant, AtbGauge::from_speed(speed)))
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod tests {
         assert!(!BattleState::TransitionIn.is_finished());
         assert!(!BattleState::Active.is_finished());
         assert!(!BattleState::TransitionOut.is_finished());
-        
+
         assert!(BattleState::Victory.is_finished());
         assert!(BattleState::Defeat.is_finished());
         assert!(BattleState::Flee.is_finished());

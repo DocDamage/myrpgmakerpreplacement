@@ -6,12 +6,12 @@
 //! - Properties panel (right sidebar)
 //! - Track controls (left sidebar)
 
-use crate::timeline::{
-    Cutscene, CutsceneLibrary, CutsceneData, CutsceneEvent,
-    EasingFunction, Interpolation, PlaybackState, PreviewRenderer, TimelineEditor, Track, TrackType, TrackValue,
-    export_to_events, TrackId,
-};
 use crate::timeline::keyframes::EffectType;
+use crate::timeline::{
+    export_to_events, Cutscene, CutsceneData, CutsceneEvent, CutsceneLibrary, EasingFunction,
+    Interpolation, PlaybackState, PreviewRenderer, TimelineEditor, Track, TrackId, TrackType,
+    TrackValue,
+};
 use dde_core::{Direction4, World};
 
 /// Main cutscene editor window
@@ -182,13 +182,13 @@ impl CutsceneEditor {
     pub fn new_cutscene(&mut self, name: impl Into<String>) {
         let name = name.into();
         let mut cutscene = Cutscene::new(name);
-        
+
         // Set default duration
         cutscene.timeline.duration = 30.0;
-        
+
         // Add default camera track
         cutscene.timeline.add_track(TrackType::Camera, "Camera");
-        
+
         self.current_cutscene = Some(cutscene);
         self.state.dirty = true;
         self.timeline = TimelineEditor::new();
@@ -210,19 +210,19 @@ impl CutsceneEditor {
         if let Some(cutscene) = &mut self.current_cutscene {
             cutscene.timeline = self.timeline.clone();
             cutscene.touch();
-            
+
             let id = cutscene.id;
-            
+
             // Update in library
             if let Some(existing) = self.library.get_mut(id) {
                 *existing = cutscene.clone();
             } else {
                 self.library.add(cutscene.clone());
             }
-            
+
             self.state.dirty = false;
             self.state.last_saved = Some(std::time::SystemTime::now());
-            
+
             Some(id)
         } else {
             None
@@ -239,7 +239,7 @@ impl CutsceneEditor {
             .default_size([1200.0, 800.0])
             .show(ctx, |ui| {
                 self.draw_menu_bar(ui);
-                
+
                 egui::CentralPanel::default().show_inside(ui, |ui| {
                     egui::SidePanel::left("cutscene_tracks")
                         .default_width(self.layout.track_panel_width)
@@ -383,20 +383,33 @@ impl CutsceneEditor {
             let track_count = self.timeline.tracks.len();
             for idx in 0..track_count {
                 // Extract all the data we need from the track first
-                let (track_id, is_selected, track_name, track_icon, track_color, is_muted, is_locked, is_visible, kf_count, duration) = {
+                let (
+                    track_id,
+                    is_selected,
+                    track_name,
+                    track_icon,
+                    track_color,
+                    is_muted,
+                    is_locked,
+                    is_visible,
+                    kf_count,
+                    duration,
+                ) = {
                     let track = &self.timeline.tracks[idx];
-                    (track.id, 
-                     self.state.selected_track == Some(track.id),
-                     track.name.clone(),
-                     track.track_type.icon(),
-                     track.color(),
-                     track.muted,
-                     track.locked,
-                     track.visible,
-                     track.keyframe_count(),
-                     track.duration())
+                    (
+                        track.id,
+                        self.state.selected_track == Some(track.id),
+                        track.name.clone(),
+                        track.track_type.icon(),
+                        track.color(),
+                        track.muted,
+                        track.locked,
+                        track.visible,
+                        track.keyframe_count(),
+                        track.duration(),
+                    )
                 };
-                
+
                 let color = egui::Color32::from_rgb(track_color[0], track_color[1], track_color[2]);
 
                 egui::Frame::group(ui.style())
@@ -409,37 +422,55 @@ impl CutsceneEditor {
                         ui.horizontal(|ui| {
                             // Icon
                             ui.colored_label(color, track_icon);
-                            
+
                             // Name
                             ui.label(&track_name);
-                            
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                // Lock button - use response to trigger action
-                                let lock_icon = if is_locked { "🔒" } else { "🔓" };
-                                if ui.button(lock_icon).on_hover_text("Lock/Unlock").clicked() {
-                                    if let Some(t) = self.timeline.tracks.iter_mut().find(|t| t.id == track_id) {
-                                        t.toggle_lock();
+
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    // Lock button - use response to trigger action
+                                    let lock_icon = if is_locked { "🔒" } else { "🔓" };
+                                    if ui.button(lock_icon).on_hover_text("Lock/Unlock").clicked() {
+                                        if let Some(t) = self
+                                            .timeline
+                                            .tracks
+                                            .iter_mut()
+                                            .find(|t| t.id == track_id)
+                                        {
+                                            t.toggle_lock();
+                                        }
                                     }
-                                }
-                                
-                                // Mute button
-                                let mute_icon = if is_muted { "🔇" } else { "🔊" };
-                                if ui.button(mute_icon).on_hover_text("Mute/Unmute").clicked() {
-                                    if let Some(t) = self.timeline.tracks.iter_mut().find(|t| t.id == track_id) {
-                                        t.toggle_mute();
+
+                                    // Mute button
+                                    let mute_icon = if is_muted { "🔇" } else { "🔊" };
+                                    if ui.button(mute_icon).on_hover_text("Mute/Unmute").clicked() {
+                                        if let Some(t) = self
+                                            .timeline
+                                            .tracks
+                                            .iter_mut()
+                                            .find(|t| t.id == track_id)
+                                        {
+                                            t.toggle_mute();
+                                        }
                                     }
-                                }
-                                
-                                // Visibility button
-                                let vis_icon = if is_visible { "👁" } else { "🚫" };
-                                if ui.button(vis_icon).on_hover_text("Show/Hide").clicked() {
-                                    if let Some(t) = self.timeline.tracks.iter_mut().find(|t| t.id == track_id) {
-                                        t.visible = !t.visible;
+
+                                    // Visibility button
+                                    let vis_icon = if is_visible { "👁" } else { "🚫" };
+                                    if ui.button(vis_icon).on_hover_text("Show/Hide").clicked() {
+                                        if let Some(t) = self
+                                            .timeline
+                                            .tracks
+                                            .iter_mut()
+                                            .find(|t| t.id == track_id)
+                                        {
+                                            t.visible = !t.visible;
+                                        }
                                     }
-                                }
-                            });
+                                },
+                            );
                         });
-                        
+
                         // Keyframe count
                         ui.horizontal(|ui| {
                             ui.label(format!("{} keyframes", kf_count));
@@ -448,12 +479,9 @@ impl CutsceneEditor {
                     });
 
                 // Selection
-                let response = ui.interact(
-                    ui.min_rect(),
-                    ui.id().with(track_id),
-                    egui::Sense::click(),
-                );
-                
+                let response =
+                    ui.interact(ui.min_rect(), ui.id().with(track_id), egui::Sense::click());
+
                 if response.clicked() {
                     self.state.selected_track = Some(track_id);
                     self.properties.tab = PropertiesTab::Track;
@@ -466,7 +494,7 @@ impl CutsceneEditor {
     #[allow(dead_code)]
     fn draw_track_item(&mut self, ui: &mut egui::Ui, track: &mut Track) {
         let is_selected = self.state.selected_track == Some(track.id);
-        
+
         let color = track.color();
         let color = egui::Color32::from_rgb(color[0], color[1], color[2]);
 
@@ -480,23 +508,23 @@ impl CutsceneEditor {
                 ui.horizontal(|ui| {
                     // Icon
                     ui.colored_label(color, track.track_type.icon());
-                    
+
                     // Name (editable)
                     ui.label(&track.name);
-                    
+
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         // Lock button
                         let lock_icon = if track.locked { "🔒" } else { "🔓" };
                         if ui.button(lock_icon).on_hover_text("Lock/Unlock").clicked() {
                             track.toggle_lock();
                         }
-                        
+
                         // Mute button
                         let mute_icon = if track.muted { "🔇" } else { "🔊" };
                         if ui.button(mute_icon).on_hover_text("Mute/Unmute").clicked() {
                             track.toggle_mute();
                         }
-                        
+
                         // Visibility button
                         let vis_icon = if track.visible { "👁" } else { "🚫" };
                         if ui.button(vis_icon).on_hover_text("Show/Hide").clicked() {
@@ -504,7 +532,7 @@ impl CutsceneEditor {
                         }
                     });
                 });
-                
+
                 // Keyframe count
                 ui.horizontal(|ui| {
                     ui.label(format!("{} keyframes", track.keyframe_count()));
@@ -513,12 +541,8 @@ impl CutsceneEditor {
             });
 
         // Selection
-        let response = ui.interact(
-            ui.min_rect(),
-            ui.id().with(track.id),
-            egui::Sense::click(),
-        );
-        
+        let response = ui.interact(ui.min_rect(), ui.id().with(track.id), egui::Sense::click());
+
         if response.clicked() {
             self.state.selected_track = Some(track.id);
             self.properties.tab = PropertiesTab::Track;
@@ -596,67 +620,87 @@ impl CutsceneEditor {
     fn draw_keyframe_properties(&mut self, ui: &mut egui::Ui) {
         // Extract what we need before borrowing
         let selection_info = self.timeline.selection.as_ref().and_then(|s| {
-            if let crate::timeline::editor::Selection::Single { track_id, keyframe_index } = s {
+            if let crate::timeline::editor::Selection::Single {
+                track_id,
+                keyframe_index,
+            } = s
+            {
                 Some((*track_id, *keyframe_index))
             } else {
                 None
             }
         });
-        
+
         if let Some((track_id, keyframe_index)) = selection_info {
             // First pass: gather data from keyframe and draw UI elements that don't need self
-            let value_needs_update = if let Some(track) = self.timeline.tracks.iter_mut().find(|t| t.id == track_id) {
-                if let Some(keyframe) = track.keyframes.get_mut(keyframe_index) {
-                    ui.label("Keyframe Properties");
-                    ui.separator();
+            let value_needs_update =
+                if let Some(track) = self.timeline.tracks.iter_mut().find(|t| t.id == track_id) {
+                    if let Some(keyframe) = track.keyframes.get_mut(keyframe_index) {
+                        ui.label("Keyframe Properties");
+                        ui.separator();
 
-                    ui.label("Time:");
-                    ui.add(egui::DragValue::new(&mut keyframe.time).speed(0.1));
+                        ui.label("Time:");
+                        ui.add(egui::DragValue::new(&mut keyframe.time).speed(0.1));
 
-                    ui.label("Interpolation:");
-                    egui::ComboBox::from_label("")
-                        .selected_text(format!("{:?}", keyframe.interpolation))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut keyframe.interpolation, Interpolation::Step, "Step");
-                            ui.selectable_value(&mut keyframe.interpolation, Interpolation::Linear, "Linear");
-                            ui.selectable_value(
-                                &mut keyframe.interpolation,
-                                Interpolation::Bezier { control_in: 0.0, control_out: 1.0 },
-                                "Bezier",
-                            );
-                        });
+                        ui.label("Interpolation:");
+                        egui::ComboBox::from_label("")
+                            .selected_text(format!("{:?}", keyframe.interpolation))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(
+                                    &mut keyframe.interpolation,
+                                    Interpolation::Step,
+                                    "Step",
+                                );
+                                ui.selectable_value(
+                                    &mut keyframe.interpolation,
+                                    Interpolation::Linear,
+                                    "Linear",
+                                );
+                                ui.selectable_value(
+                                    &mut keyframe.interpolation,
+                                    Interpolation::Bezier {
+                                        control_in: 0.0,
+                                        control_out: 1.0,
+                                    },
+                                    "Bezier",
+                                );
+                            });
 
-                    ui.label("Easing:");
-                    egui::ComboBox::from_label("")
-                        .selected_text(keyframe.easing.display_name())
-                        .show_ui(ui, |ui| {
-                            for easing in [
-                                EasingFunction::Linear,
-                                EasingFunction::EaseInQuad,
-                                EasingFunction::EaseOutQuad,
-                                EasingFunction::EaseInOutQuad,
-                                EasingFunction::EaseInCubic,
-                                EasingFunction::EaseOutElastic,
-                            ] {
-                                ui.selectable_value(&mut keyframe.easing, easing, easing.display_name());
-                            }
-                        });
+                        ui.label("Easing:");
+                        egui::ComboBox::from_label("")
+                            .selected_text(keyframe.easing.display_name())
+                            .show_ui(ui, |ui| {
+                                for easing in [
+                                    EasingFunction::Linear,
+                                    EasingFunction::EaseInQuad,
+                                    EasingFunction::EaseOutQuad,
+                                    EasingFunction::EaseInOutQuad,
+                                    EasingFunction::EaseInCubic,
+                                    EasingFunction::EaseOutElastic,
+                                ] {
+                                    ui.selectable_value(
+                                        &mut keyframe.easing,
+                                        easing,
+                                        easing.display_name(),
+                                    );
+                                }
+                            });
 
-                    // Value editor based on track type
-                    ui.separator();
-                    ui.label("Value:");
-                    // Clone the value temporarily to avoid borrow issues
-                    let mut value = keyframe.value.clone();
-                    let value_ref = &mut value;
-                    self.draw_value_editor(ui, value_ref);
-                    Some((track_id, keyframe_index, value))
+                        // Value editor based on track type
+                        ui.separator();
+                        ui.label("Value:");
+                        // Clone the value temporarily to avoid borrow issues
+                        let mut value = keyframe.value.clone();
+                        let value_ref = &mut value;
+                        self.draw_value_editor(ui, value_ref);
+                        Some((track_id, keyframe_index, value))
+                    } else {
+                        None
+                    }
                 } else {
                     None
-                }
-            } else {
-                None
-            };
-            
+                };
+
             // Apply the value update if needed
             if let Some((tid, kidx, new_value)) = value_needs_update {
                 if let Some(track) = self.timeline.tracks.iter_mut().find(|t| t.id == tid) {
@@ -676,9 +720,21 @@ impl CutsceneEditor {
             TrackValue::Camera(cam) => {
                 ui.label("Position:");
                 ui.horizontal(|ui| {
-                    ui.add(egui::DragValue::new(&mut cam.position.x).prefix("X: ").speed(0.1));
-                    ui.add(egui::DragValue::new(&mut cam.position.y).prefix("Y: ").speed(0.1));
-                    ui.add(egui::DragValue::new(&mut cam.position.z).prefix("Z: ").speed(0.1));
+                    ui.add(
+                        egui::DragValue::new(&mut cam.position.x)
+                            .prefix("X: ")
+                            .speed(0.1),
+                    );
+                    ui.add(
+                        egui::DragValue::new(&mut cam.position.y)
+                            .prefix("Y: ")
+                            .speed(0.1),
+                    );
+                    ui.add(
+                        egui::DragValue::new(&mut cam.position.z)
+                            .prefix("Z: ")
+                            .speed(0.1),
+                    );
                 });
                 ui.add(egui::Slider::new(&mut cam.zoom, 0.1..=5.0).text("Zoom"));
                 ui.add(egui::Slider::new(&mut cam.rotation, -180.0..=180.0).text("Rotation"));
@@ -688,9 +744,21 @@ impl CutsceneEditor {
             TrackValue::Entity(ent) => {
                 ui.label("Position:");
                 ui.horizontal(|ui| {
-                    ui.add(egui::DragValue::new(&mut ent.position.x).prefix("X: ").speed(0.1));
-                    ui.add(egui::DragValue::new(&mut ent.position.y).prefix("Y: ").speed(0.1));
-                    ui.add(egui::DragValue::new(&mut ent.position.z).prefix("Z: ").speed(0.1));
+                    ui.add(
+                        egui::DragValue::new(&mut ent.position.x)
+                            .prefix("X: ")
+                            .speed(0.1),
+                    );
+                    ui.add(
+                        egui::DragValue::new(&mut ent.position.y)
+                            .prefix("Y: ")
+                            .speed(0.1),
+                    );
+                    ui.add(
+                        egui::DragValue::new(&mut ent.position.z)
+                            .prefix("Z: ")
+                            .speed(0.1),
+                    );
                 });
                 ui.checkbox(&mut ent.visible, "Visible");
                 ui.label("Direction:");
@@ -718,7 +786,11 @@ impl CutsceneEditor {
                         ui.selectable_value(&mut effect.effect_type, EffectType::Shake, "Shake");
                         ui.selectable_value(&mut effect.effect_type, EffectType::Blur, "Blur");
                         ui.selectable_value(&mut effect.effect_type, EffectType::Bloom, "Bloom");
-                        ui.selectable_value(&mut effect.effect_type, EffectType::Vignette, "Vignette");
+                        ui.selectable_value(
+                            &mut effect.effect_type,
+                            EffectType::Vignette,
+                            "Vignette",
+                        );
                     });
                 ui.add(egui::Slider::new(&mut effect.intensity, 0.0..=1.0).text("Intensity"));
             }
@@ -729,7 +801,11 @@ impl CutsceneEditor {
                 ui.text_edit_multiline(&mut dia.text);
                 ui.checkbox(&mut dia.auto_advance, "Auto Advance");
                 if dia.auto_advance {
-                    ui.add(egui::DragValue::new(&mut dia.advance_delay_ms).prefix("Delay (ms): ").speed(100));
+                    ui.add(
+                        egui::DragValue::new(&mut dia.advance_delay_ms)
+                            .prefix("Delay (ms): ")
+                            .speed(100),
+                    );
                 }
             }
         }
@@ -750,7 +826,11 @@ impl CutsceneEditor {
             ui.separator();
 
             ui.label("Duration:");
-            ui.add(egui::DragValue::new(&mut self.timeline.duration).speed(1.0).suffix("s"));
+            ui.add(
+                egui::DragValue::new(&mut self.timeline.duration)
+                    .speed(1.0)
+                    .suffix("s"),
+            );
 
             ui.checkbox(&mut self.timeline.loop_playback, "Loop Playback");
 
@@ -774,13 +854,25 @@ impl CutsceneEditor {
         egui::ComboBox::from_label("")
             .selected_text(format!("{:?}", self.export_settings.format))
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut self.export_settings.format, ExportFormat::PngSequence, "PNG Sequence");
+                ui.selectable_value(
+                    &mut self.export_settings.format,
+                    ExportFormat::PngSequence,
+                    "PNG Sequence",
+                );
                 ui.selectable_value(&mut self.export_settings.format, ExportFormat::Json, "JSON");
-                ui.selectable_value(&mut self.export_settings.format, ExportFormat::Binary, "Binary");
+                ui.selectable_value(
+                    &mut self.export_settings.format,
+                    ExportFormat::Binary,
+                    "Binary",
+                );
             });
 
         ui.label("Frame Rate:");
-        ui.add(egui::DragValue::new(&mut self.export_settings.frame_rate).speed(1.0).suffix("fps"));
+        ui.add(
+            egui::DragValue::new(&mut self.export_settings.frame_rate)
+                .speed(1.0)
+                .suffix("fps"),
+        );
 
         ui.label("Resolution:");
         ui.horizontal(|ui| {
@@ -824,14 +916,15 @@ impl CutsceneEditor {
             let new_ratio = (preview_height + delta) / available_height;
             self.layout.preview_ratio = new_ratio.clamp(0.1, 0.9);
         }
-        ui.painter().rect_filled(handle_rect, 0.0, ui.visuals().widgets.inactive.bg_fill);
+        ui.painter()
+            .rect_filled(handle_rect, 0.0, ui.visuals().widgets.inactive.bg_fill);
 
         // Timeline panel
         let timeline_rect = egui::Rect::from_min_size(
             egui::pos2(preview_rect.min.x, handle_rect.max.y),
             egui::vec2(preview_rect.width(), timeline_height - 4.0),
         );
-        
+
         egui::Frame::group(ui.style()).show(ui, |ui| {
             ui.set_min_size(timeline_rect.size());
             self.timeline.draw_ui(ui);
@@ -841,7 +934,7 @@ impl CutsceneEditor {
     /// Draw preview panel
     fn draw_preview_panel(&mut self, ui: &mut egui::Ui, rect: egui::Rect, world: &World) {
         let painter = ui.painter_at(rect);
-        
+
         // Background
         painter.rect_filled(rect, 0.0, egui::Color32::BLACK);
 
@@ -853,11 +946,9 @@ impl CutsceneEditor {
             painter.text(
                 rect.center(),
                 egui::Align2::CENTER_CENTER,
-                format!("Preview\nTime: {:.2}s\nCamera: {:.1}, {:.1}, {:.1}",
-                    frame.time,
-                    frame.camera.position.x,
-                    frame.camera.position.y,
-                    frame.camera.zoom
+                format!(
+                    "Preview\nTime: {:.2}s\nCamera: {:.1}, {:.1}, {:.1}",
+                    frame.time, frame.camera.position.x, frame.camera.position.y, frame.camera.zoom
                 ),
                 egui::FontId::proportional(16.0),
                 egui::Color32::WHITE,
@@ -888,7 +979,7 @@ impl CutsceneEditor {
             egui::pos2(rect.min.x + 10.0, rect.min.y + 10.0),
             egui::vec2(200.0, 30.0),
         );
-        
+
         egui::Area::new(ui.id().with("preview_controls"))
             .fixed_pos(controls_rect.min)
             .show(ui.ctx(), |ui| {
@@ -936,7 +1027,8 @@ impl CutsceneEditor {
 
     /// Get current cutscene data
     pub fn current_cutscene_data(&self) -> Option<CutsceneData> {
-        self.current_cutscene.as_ref()
+        self.current_cutscene
+            .as_ref()
             .map(|c| CutsceneData::from_timeline(&self.timeline, &c.name))
     }
 
@@ -977,7 +1069,7 @@ mod tests {
     fn test_new_cutscene() {
         let mut editor = CutsceneEditor::new();
         editor.new_cutscene("Test Cutscene");
-        
+
         assert!(editor.current_cutscene.is_some());
         assert!(editor.state.dirty);
         assert_eq!(editor.timeline.tracks.len(), 1);
@@ -987,12 +1079,12 @@ mod tests {
     fn test_export_to_events() {
         let mut editor = CutsceneEditor::new();
         editor.new_cutscene("Test");
-        
+
         // Add a keyframe
         let value = TrackValue::Camera(CameraValue::default());
         editor.timeline.tracks[0].add_keyframe(0.0, value.clone());
         editor.timeline.tracks[0].add_keyframe(5.0, value);
-        
+
         let events = editor.export_to_events();
         assert!(!events.is_empty());
     }

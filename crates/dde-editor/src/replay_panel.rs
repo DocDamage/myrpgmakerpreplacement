@@ -101,7 +101,7 @@ impl ReplayPanel {
                         let file_size = metadata.len();
                         // Try to load metadata
                         let replay_metadata = Self::load_replay_metadata(&path);
-                        
+
                         self.replay_library.push(ReplayEntry {
                             path,
                             metadata: replay_metadata,
@@ -139,17 +139,29 @@ impl ReplayPanel {
     pub fn draw(&mut self, ui: &mut Ui, world: &World) {
         // Tab bar
         ui.horizontal(|ui| {
-            if ui.selectable_label(self.current_tab == ReplayPanelTab::Library, "📚 Library").clicked() {
+            if ui
+                .selectable_label(self.current_tab == ReplayPanelTab::Library, "📚 Library")
+                .clicked()
+            {
                 self.current_tab = ReplayPanelTab::Library;
                 self.refresh_library();
             }
-            if ui.selectable_label(self.current_tab == ReplayPanelTab::Recording, "⏺ Record").clicked() {
+            if ui
+                .selectable_label(self.current_tab == ReplayPanelTab::Recording, "⏺ Record")
+                .clicked()
+            {
                 self.current_tab = ReplayPanelTab::Recording;
             }
-            if ui.selectable_label(self.current_tab == ReplayPanelTab::Playback, "▶ Playback").clicked() {
+            if ui
+                .selectable_label(self.current_tab == ReplayPanelTab::Playback, "▶ Playback")
+                .clicked()
+            {
                 self.current_tab = ReplayPanelTab::Playback;
             }
-            if ui.selectable_label(self.current_tab == ReplayPanelTab::Settings, "⚙ Settings").clicked() {
+            if ui
+                .selectable_label(self.current_tab == ReplayPanelTab::Settings, "⚙ Settings")
+                .clicked()
+            {
                 self.current_tab = ReplayPanelTab::Settings;
             }
         });
@@ -158,7 +170,11 @@ impl ReplayPanel {
 
         // Status message
         if let Some((msg, is_error)) = &self.status_message {
-            let color = if *is_error { Color32::RED } else { Color32::GREEN };
+            let color = if *is_error {
+                Color32::RED
+            } else {
+                Color32::GREEN
+            };
             ui.label(RichText::new(msg).color(color));
             if ui.button("Clear").clicked() {
                 self.status_message = None;
@@ -184,30 +200,70 @@ impl ReplayPanel {
             self.refresh_library();
         }
 
-        ui.label(format!("Found {} replays in {:?}", self.replay_library.len(), self.replay_directory));
+        ui.label(format!(
+            "Found {} replays in {:?}",
+            self.replay_library.len(),
+            self.replay_directory
+        ));
         ui.add_space(10.0);
 
         if self.replay_library.is_empty() {
             ui.label("No replays found. Record some gameplay!");
         } else {
             // Collect all data first to avoid borrow issues
-            let entries: Vec<_> = self.replay_library.iter().enumerate().map(|(i, e)| {
-                let name = e.metadata.as_ref().map(|m| m.player_name.clone()).unwrap_or_else(|| {
-                    e.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Unknown".into())
-                });
-                let map = e.metadata.as_ref().map(|m| m.map_name.clone()).unwrap_or_default();
-                let duration = e.metadata.as_ref().map(|m| m.formatted_duration()).unwrap_or_default();
-                let time = e.metadata.as_ref().map(|m| m.formatted_time()).unwrap_or_default();
-                let desc = e.metadata.as_ref().and_then(|m| m.description.clone());
-                let has_metadata = e.metadata.is_some();
-                (i, name, map, duration, time, desc, e.file_size, e.path.clone(), has_metadata)
-            }).collect();
+            let entries: Vec<_> = self
+                .replay_library
+                .iter()
+                .enumerate()
+                .map(|(i, e)| {
+                    let name = e
+                        .metadata
+                        .as_ref()
+                        .map(|m| m.player_name.clone())
+                        .unwrap_or_else(|| {
+                            e.path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "Unknown".into())
+                        });
+                    let map = e
+                        .metadata
+                        .as_ref()
+                        .map(|m| m.map_name.clone())
+                        .unwrap_or_default();
+                    let duration = e
+                        .metadata
+                        .as_ref()
+                        .map(|m| m.formatted_duration())
+                        .unwrap_or_default();
+                    let time = e
+                        .metadata
+                        .as_ref()
+                        .map(|m| m.formatted_time())
+                        .unwrap_or_default();
+                    let desc = e.metadata.as_ref().and_then(|m| m.description.clone());
+                    let has_metadata = e.metadata.is_some();
+                    (
+                        i,
+                        name,
+                        map,
+                        duration,
+                        time,
+                        desc,
+                        e.file_size,
+                        e.path.clone(),
+                        has_metadata,
+                    )
+                })
+                .collect();
             let selected = self.selected_replay;
-            
+
             egui::ScrollArea::vertical().show(ui, |ui| {
-                for (index, name, map, duration, time, desc, file_size, path, has_metadata) in entries {
+                for (index, name, map, duration, time, desc, file_size, path, has_metadata) in
+                    entries
+                {
                     let is_selected = selected == Some(index);
-                    
+
                     ui.group(|ui| {
                         ui.horizontal(|ui| {
                             // Selection radio
@@ -230,20 +286,23 @@ impl ReplayPanel {
                                 ui.label(format!("Size: {} KB", file_size / 1024));
                             });
 
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.button("🗑 Delete").clicked() {
-                                    if let Err(e) = std::fs::remove_file(&path) {
-                                        self.set_status(format!("Delete failed: {}", e), true);
-                                    } else {
-                                        self.set_status("Replay deleted", false);
-                                        self.refresh_library();
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if ui.button("🗑 Delete").clicked() {
+                                        if let Err(e) = std::fs::remove_file(&path) {
+                                            self.set_status(format!("Delete failed: {}", e), true);
+                                        } else {
+                                            self.set_status("Replay deleted", false);
+                                            self.refresh_library();
+                                        }
                                     }
-                                }
 
-                                if ui.button("📂 Load").clicked() && has_metadata {
-                                    self.load_replay(index);
-                                }
-                            });
+                                    if ui.button("📂 Load").clicked() && has_metadata {
+                                        self.load_replay(index);
+                                    }
+                                },
+                            );
                         });
                     });
                     ui.add_space(5.0);
@@ -256,18 +315,16 @@ impl ReplayPanel {
     fn load_replay(&mut self, index: usize) {
         if let Some(entry) = self.replay_library.get(index) {
             match std::fs::read(&entry.path) {
-                Ok(bytes) => {
-                    match Replay::from_bytes(&bytes) {
-                        Ok(replay) => {
-                            self.player = Some(ReplayPlayer::new(replay));
-                            self.state = ReplayState::Paused;
-                            self.selected_replay = Some(index);
-                            self.current_tab = ReplayPanelTab::Playback;
-                            self.set_status("Replay loaded", false);
-                        }
-                        Err(e) => self.set_status(format!("Failed to parse replay: {}", e), true),
+                Ok(bytes) => match Replay::from_bytes(&bytes) {
+                    Ok(replay) => {
+                        self.player = Some(ReplayPlayer::new(replay));
+                        self.state = ReplayState::Paused;
+                        self.selected_replay = Some(index);
+                        self.current_tab = ReplayPanelTab::Playback;
+                        self.set_status("Replay loaded", false);
                     }
-                }
+                    Err(e) => self.set_status(format!("Failed to parse replay: {}", e), true),
+                },
                 Err(e) => self.set_status(format!("Failed to read replay: {}", e), true),
             }
         }
@@ -305,7 +362,7 @@ impl ReplayPanel {
             }
             ReplayState::Recording => {
                 ui.label(RichText::new("🔴 RECORDING").color(Color32::RED).heading());
-                
+
                 if let Some(recorder) = &self.recorder {
                     ui.label(format!("Current tick: {}", recorder.current_tick()));
                 }
@@ -321,7 +378,7 @@ impl ReplayPanel {
             }
             ReplayState::Paused => {
                 ui.label(RichText::new("⏸ PAUSED").color(Color32::YELLOW).heading());
-                
+
                 if let Some(recorder) = &self.recorder {
                     ui.label(format!("Current tick: {}", recorder.current_tick()));
                 }
@@ -345,7 +402,7 @@ impl ReplayPanel {
     fn start_recording(&mut self, world: &World) {
         let snapshot = WorldSerializer::serialize(world, self.recording_seed, 0);
         let mut recorder = ReplayRecorder::new(self.recording_seed, snapshot);
-        
+
         // Set metadata
         recorder.metadata_mut().player_name = self.new_replay_name.clone();
         recorder.metadata_mut().description = if self.new_replay_description.is_empty() {
@@ -379,7 +436,7 @@ impl ReplayPanel {
     fn stop_recording(&mut self) {
         if let Some(recorder) = self.recorder.take() {
             let replay = recorder.finish();
-            
+
             // Generate filename
             let filename = format!(
                 "{}_{}.ddr",
@@ -389,15 +446,13 @@ impl ReplayPanel {
             let path = self.replay_directory.join(filename);
 
             match replay.to_bytes() {
-                Ok(bytes) => {
-                    match std::fs::write(&path, bytes) {
-                        Ok(()) => {
-                            self.set_status(format!("Saved replay to {:?}", path), false);
-                            self.refresh_library();
-                        }
-                        Err(e) => self.set_status(format!("Failed to save: {}", e), true),
+                Ok(bytes) => match std::fs::write(&path, bytes) {
+                    Ok(()) => {
+                        self.set_status(format!("Saved replay to {:?}", path), false);
+                        self.refresh_library();
                     }
-                }
+                    Err(e) => self.set_status(format!("Failed to save: {}", e), true),
+                },
                 Err(e) => self.set_status(format!("Failed to serialize: {}", e), true),
             }
         }
@@ -412,7 +467,7 @@ impl ReplayPanel {
 
         if let Some(player) = &mut self.player {
             let replay = player.replay();
-            
+
             // Metadata display
             ui.group(|ui| {
                 ui.label(RichText::new(&replay.metadata.player_name).heading());
@@ -420,7 +475,10 @@ impl ReplayPanel {
                 if let Some(desc) = &replay.metadata.description {
                     ui.label(desc);
                 }
-                ui.label(format!("Duration: {}", replay.metadata.formatted_duration()));
+                ui.label(format!(
+                    "Duration: {}",
+                    replay.metadata.formatted_duration()
+                ));
             });
 
             ui.add_space(10.0);
@@ -429,20 +487,25 @@ impl ReplayPanel {
             let progress = player.progress();
             let current_tick = player.current_tick();
             let total_ticks = player.total_ticks();
-            
-            ui.label(format!("Tick: {} / {} ({:.1}%)", current_tick, total_ticks, progress * 100.0));
-            
+
+            ui.label(format!(
+                "Tick: {} / {} ({:.1}%)",
+                current_tick,
+                total_ticks,
+                progress * 100.0
+            ));
+
             // Scrubber
             let scrub_value = if self.is_scrubbing {
                 self.seek_target
             } else {
                 progress
             };
-            
+
             let response = ui.add(
                 ProgressBar::new(scrub_value)
                     .text(format!("{:.1}%", progress * 100.0))
-                    .animate(player.is_playing())
+                    .animate(player.is_playing()),
             );
 
             // Click to seek
@@ -485,14 +548,24 @@ impl ReplayPanel {
             // Speed control
             ui.horizontal(|ui| {
                 ui.label("Speed:");
-                if ui.button("0.5x").clicked() { player.set_speed(0.5); }
-                if ui.button("1x").clicked() { player.set_speed(1.0); }
-                if ui.button("2x").clicked() { player.set_speed(2.0); }
-                if ui.button("4x").clicked() { player.set_speed(4.0); }
-                
-                ui.add(egui::Slider::new(&mut self.playback_speed, 0.1..=10.0)
-                    .text("x")
-                    .logarithmic(true));
+                if ui.button("0.5x").clicked() {
+                    player.set_speed(0.5);
+                }
+                if ui.button("1x").clicked() {
+                    player.set_speed(1.0);
+                }
+                if ui.button("2x").clicked() {
+                    player.set_speed(2.0);
+                }
+                if ui.button("4x").clicked() {
+                    player.set_speed(4.0);
+                }
+
+                ui.add(
+                    egui::Slider::new(&mut self.playback_speed, 0.1..=10.0)
+                        .text("x")
+                        .logarithmic(true),
+                );
                 player.set_speed(self.playback_speed);
             });
 
@@ -604,7 +677,13 @@ impl ReplayPanel {
 fn sanitize_filename(input: &str) -> String {
     input
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 

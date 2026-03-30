@@ -6,7 +6,6 @@
 pub mod behavior_tree;
 
 pub use behavior_tree::{
-    BehaviorTreeComponent, BehaviorTreeRunner, Blackboard, BlackboardValue,
-    BtStatus, CompiledBehaviorTree, NodeId, ParallelPolicy, RuntimeNode,
-    Action, Condition,
+    Action, BehaviorTreeComponent, BehaviorTreeRunner, Blackboard, BlackboardValue, BtStatus,
+    CompiledBehaviorTree, Condition, NodeId, ParallelPolicy, RuntimeNode,
 };

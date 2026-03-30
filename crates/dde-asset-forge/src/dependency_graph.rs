@@ -12,7 +12,9 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 /// Asset types in the dependency graph
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 pub enum AssetType {
     #[default]
     Data,
@@ -64,7 +66,9 @@ impl AssetType {
             AssetType::Shader,
             AssetType::Font,
             AssetType::Data,
-        ].into_iter().find(|&asset_type| asset_type.extensions().contains(&ext.as_str()))
+        ]
+        .into_iter()
+        .find(|&asset_type| asset_type.extensions().contains(&ext.as_str()))
     }
 }
 
@@ -413,9 +417,7 @@ impl DependencyGraph {
     pub fn find_orphans(&self, root_types: &[AssetType]) -> Vec<&AssetId> {
         self.nodes
             .values()
-            .filter(|node| {
-                node.dependents.is_empty() && !root_types.contains(&node.id.asset_type)
-            })
+            .filter(|node| node.dependents.is_empty() && !root_types.contains(&node.id.asset_type))
             .map(|node| &node.id)
             .collect()
     }
@@ -774,7 +776,7 @@ mod tests {
     fn test_topological_sort() {
         let graph = create_test_graph();
         let sorted = graph.topological_sort();
-        
+
         // Debug: print all items
         println!("Sorted order:");
         for (i, id) in sorted.iter().enumerate() {
@@ -785,17 +787,20 @@ mod tests {
         // So texture should come before tileset (which depends on texture)
         let texture_path: PathBuf = "textures/terrain.png".into();
         let tileset_path: PathBuf = "tilesets/terrain.tsx".into();
-        
+
         let texture_pos = sorted.iter().position(|id| id.path == texture_path);
         let tileset_pos = sorted.iter().position(|id| id.path == tileset_path);
 
         assert!(texture_pos.is_some(), "Texture not found in sorted list");
         assert!(tileset_pos.is_some(), "Tileset not found in sorted list");
-        
+
         // Dependencies first means texture comes before tileset
-        assert!(texture_pos.unwrap() < tileset_pos.unwrap(), 
-            "Texture (dependency at {:?}) should come before tileset (dependent at {:?})", 
-            texture_pos, tileset_pos);
+        assert!(
+            texture_pos.unwrap() < tileset_pos.unwrap(),
+            "Texture (dependency at {:?}) should come before tileset (dependent at {:?})",
+            texture_pos,
+            tileset_pos
+        );
     }
 
     #[test]

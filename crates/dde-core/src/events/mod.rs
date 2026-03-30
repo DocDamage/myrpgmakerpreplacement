@@ -52,6 +52,9 @@ pub enum EngineEvent {
     },
 
     // ==================== Sim Events ====================
+    /// Simulation tick occurred
+    SimulationTick { tick_count: u64 },
+
     /// Simulation stat changed
     SimStatChanged { key: String, old: f64, new: f64 },
 
@@ -298,6 +301,11 @@ impl EngineEventBus {
     /// Check if empty
     pub fn is_empty(&self) -> bool {
         self.receiver.is_empty()
+    }
+
+    /// Emit an event (alias for send)
+    pub fn emit(&self, event: EngineEvent) {
+        self.send(event);
     }
 }
 

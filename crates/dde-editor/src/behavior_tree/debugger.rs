@@ -88,7 +88,7 @@ impl BtDebugger {
         }
 
         self.time_since_refresh += dt;
-        
+
         if self.time_since_refresh < 1.0 / self.refresh_rate {
             return;
         }
@@ -96,7 +96,7 @@ impl BtDebugger {
 
         // Update execution path
         let new_path: Vec<NodeId> = runner.current_path().to_vec();
-        
+
         // Detect changes and record to history
         for node_id in &new_path {
             let new_status = BtStatus::Running;
@@ -128,12 +128,12 @@ impl BtDebugger {
             from,
             to,
         };
-        
+
         if self.status_history.len() >= 100 {
             self.status_history.pop_back();
         }
         self.status_history.push_front(change);
-        
+
         self.node_status.insert(node_id, to);
     }
 
@@ -205,13 +205,13 @@ impl BtDebugger {
             {
                 self.toggle_pause();
             }
-            
+
             if ui.button("⏭ Step").clicked() {
                 self.step();
             }
-            
+
             ui.checkbox(&mut self.auto_step, "Auto-step");
-            
+
             ui.add(
                 egui::Slider::new(&mut self.refresh_rate, 1.0..=60.0)
                     .text("Refresh rate")
@@ -228,11 +228,13 @@ impl BtDebugger {
             } else {
                 for (i, node_id) in self.execution_path.iter().enumerate() {
                     let indent = "  ".repeat(i);
-                    let status = self.node_status.get(node_id).copied().unwrap_or(BtStatus::Failure);
+                    let status = self
+                        .node_status
+                        .get(node_id)
+                        .copied()
+                        .unwrap_or(BtStatus::Failure);
                     let color = status_color(status);
-                    ui.label(
-                        RichText::new(format!("{}└─ {:?}", indent, node_id)).color(color),
-                    );
+                    ui.label(RichText::new(format!("{}└─ {:?}", indent, node_id)).color(color));
                 }
             }
         });
@@ -323,7 +325,9 @@ impl BtDebugger {
         painter.rect_stroke(bubble_rect, 5.0, (1.0, Color32::WHITE));
 
         // Current action text
-        let current_node = runner.running_node().map(|id| format!("Node {:?}", id))
+        let current_node = runner
+            .running_node()
+            .map(|id| format!("Node {:?}", id))
             .unwrap_or_else(|| "Idle".to_string());
 
         painter.text(
@@ -335,7 +339,8 @@ impl BtDebugger {
         );
 
         // Status indicator
-        let status = runner.running_node()
+        let status = runner
+            .running_node()
             .and_then(|id| self.node_status.get(&id))
             .copied()
             .unwrap_or(BtStatus::Running);
@@ -407,25 +412,30 @@ pub fn draw_node_with_status(
     if let Some(dbg) = debugger {
         let status_color = dbg.node_status_color(node_id);
         let is_in_path = dbg.is_in_execution_path(node_id);
-        
+
         let stroke_width = if is_in_path { 3.0 } else { 1.0 };
         let stroke_color = if is_in_path {
             status_color
         } else {
             Color32::GRAY
         };
-        
+
         frame = frame.stroke(egui::Stroke::new(stroke_width, stroke_color));
-        
+
         if dbg.has_breakpoint(node_id) {
             // Add breakpoint indicator
-            frame = frame.fill(status_color_dark(dbg.node_status.get(&node_id).copied().unwrap_or(BtStatus::Running)));
+            frame = frame.fill(status_color_dark(
+                dbg.node_status
+                    .get(&node_id)
+                    .copied()
+                    .unwrap_or(BtStatus::Running),
+            ));
         }
     }
 
     frame.show(ui, |ui| {
         f(ui);
-        
+
         // Draw status indicator dot
         if let Some(dbg) = debugger {
             let status = dbg.node_status.get(&node_id).copied();
@@ -483,13 +493,13 @@ pub struct BtDebugStats {
 impl BtDebugStats {
     pub fn record_tick(&mut self, status: BtStatus, duration_ms: f32) {
         self.total_ticks += 1;
-        
+
         match status {
             BtStatus::Success => self.success_count += 1,
             BtStatus::Failure => self.failure_count += 1,
             BtStatus::Running => self.running_count += 1,
         }
-        
+
         // Rolling average
         let alpha = 0.1;
         self.avg_tick_time_ms = self.avg_tick_time_ms * (1.0 - alpha) + duration_ms * alpha;
@@ -519,10 +529,10 @@ mod tests {
     fn test_debugger_target() {
         let mut debugger = BtDebugger::new();
         let entity = Entity::DANGLING;
-        
+
         debugger.set_target(entity);
         assert_eq!(debugger.target_entity(), Some(entity));
-        
+
         debugger.clear_target();
         assert!(debugger.target_entity().is_none());
     }
@@ -531,31 +541,40 @@ mod tests {
     fn test_breakpoints() {
         let mut debugger = BtDebugger::new();
         let node_id = NodeId::new();
-        
+
         assert!(!debugger.has_breakpoint(node_id));
-        
+
         debugger.toggle_breakpoint(node_id);
         assert!(debugger.has_breakpoint(node_id));
-        
+
         debugger.toggle_breakpoint(node_id);
         assert!(!debugger.has_breakpoint(node_id));
     }
 
     #[test]
     fn test_status_colors() {
-        assert_eq!(status_color(BtStatus::Success), Color32::from_rgb(100, 200, 100));
-        assert_eq!(status_color(BtStatus::Failure), Color32::from_rgb(200, 100, 100));
-        assert_eq!(status_color(BtStatus::Running), Color32::from_rgb(255, 200, 50));
+        assert_eq!(
+            status_color(BtStatus::Success),
+            Color32::from_rgb(100, 200, 100)
+        );
+        assert_eq!(
+            status_color(BtStatus::Failure),
+            Color32::from_rgb(200, 100, 100)
+        );
+        assert_eq!(
+            status_color(BtStatus::Running),
+            Color32::from_rgb(255, 200, 50)
+        );
     }
 
     #[test]
     fn test_debug_stats() {
         let mut stats = BtDebugStats::default();
-        
+
         stats.record_tick(BtStatus::Success, 1.0);
         stats.record_tick(BtStatus::Success, 1.0);
         stats.record_tick(BtStatus::Failure, 1.0);
-        
+
         assert_eq!(stats.total_ticks, 3);
         assert_eq!(stats.success_count, 2);
         assert_eq!(stats.failure_count, 1);

@@ -1,0 +1,27 @@
+# Rustfmt configuration for DocDamage Engine
+# See: https://rust-lang.github.io/rustfmt/
+# Note: Only stable features are used (requires nightly for unstable features)
+
+# Maximum width of each line
+max_width = 100
+
+# Number of spaces per tab
+tab_spaces = 4
+
+# Use field init shorthand
+use_field_init_shorthand = true
+
+# Reorder imports
+reorder_imports = true
+
+# Reorder modules
+reorder_modules = true
+
+# Remove nested parentheses
+remove_nested_parens = true
+
+# Edition
+edition = "2021"
+
+# Use small heuristics
+use_small_heuristics = "Default"

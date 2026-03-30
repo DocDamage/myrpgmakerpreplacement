@@ -34,8 +34,7 @@ pub enum ExecutionError {
 pub type ExecutionResult<T> = std::result::Result<T, ExecutionError>;
 
 /// Values that can be stored in script variables
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum ScriptValue {
     #[default]
     None,
@@ -62,7 +61,13 @@ impl ScriptValue {
     pub fn as_number(&self) -> f64 {
         match self {
             ScriptValue::Number(n) => *n,
-            ScriptValue::Bool(b) => if *b { 1.0 } else { 0.0 },
+            ScriptValue::Bool(b) => {
+                if *b {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
             _ => 0.0,
         }
     }
@@ -89,7 +94,6 @@ impl ScriptValue {
         }
     }
 }
-
 
 /// A stack frame for function call tracking
 #[derive(Debug, Clone)]
@@ -195,7 +199,11 @@ impl ScriptExecutor {
     }
 
     /// Set a local variable (in current stack frame)
-    pub fn set_local_variable(&mut self, name: impl Into<String>, value: ScriptValue) -> ExecutionResult<()> {
+    pub fn set_local_variable(
+        &mut self,
+        name: impl Into<String>,
+        value: ScriptValue,
+    ) -> ExecutionResult<()> {
         if let Some(frame) = self.call_stack.last_mut() {
             frame.variables.insert(name.into(), value);
             Ok(())
@@ -243,17 +251,18 @@ impl ScriptExecutor {
                 Ok(())
             }
 
-            GameEvent::MoveEntity { entity_ref, x, y, relative } => {
-                self.execute_move_entity(*entity_ref, *x, *y, *relative, world)
-            }
+            GameEvent::MoveEntity {
+                entity_ref,
+                x,
+                y,
+                relative,
+            } => self.execute_move_entity(*entity_ref, *x, *y, *relative, world),
 
             GameEvent::PlayAnimation { anim_id, target } => {
                 self.execute_play_animation(*anim_id, *target, world)
             }
 
-            GameEvent::Teleport { map_id, x, y } => {
-                self.execute_teleport(*map_id, *x, *y, world)
-            }
+            GameEvent::Teleport { map_id, x, y } => self.execute_teleport(*map_id, *x, *y, world),
 
             GameEvent::SpawnEntity { template_id, x, y } => {
                 self.execute_spawn_entity(*template_id, *x, *y, world)
@@ -263,9 +272,10 @@ impl ScriptExecutor {
                 self.execute_despawn_entity(*entity_ref, world)
             }
 
-            GameEvent::StartBattle { encounter_id, transition } => {
-                self.execute_start_battle(*encounter_id, transition, world)
-            }
+            GameEvent::StartBattle {
+                encounter_id,
+                transition,
+            } => self.execute_start_battle(*encounter_id, transition, world),
 
             GameEvent::ModifyHealth { target, amount } => {
                 self.execute_modify_health(*target, *amount, world)
@@ -275,17 +285,18 @@ impl ScriptExecutor {
                 self.execute_grant_exp(*target, *amount, world)
             }
 
-            GameEvent::ShowDialogue { text, speaker, portrait } => {
-                self.execute_show_dialogue(text, speaker, *portrait, world)
-            }
+            GameEvent::ShowDialogue {
+                text,
+                speaker,
+                portrait,
+            } => self.execute_show_dialogue(text, speaker, *portrait, world),
 
-            GameEvent::ShowNotification { text, duration_secs } => {
-                self.execute_show_notification(text, *duration_secs, world)
-            }
+            GameEvent::ShowNotification {
+                text,
+                duration_secs,
+            } => self.execute_show_notification(text, *duration_secs, world),
 
-            GameEvent::PlaySfx { sound_id } => {
-                self.execute_play_sfx(sound_id, world)
-            }
+            GameEvent::PlaySfx { sound_id } => self.execute_play_sfx(sound_id, world),
 
             GameEvent::ChangeBgm { bgm_id, fade_ms } => {
                 self.execute_change_bgm(bgm_id, *fade_ms, world)
@@ -303,41 +314,37 @@ impl ScriptExecutor {
                 self.execute_set_game_flag(flag_key, *value, world)
             }
 
-            GameEvent::ModifyVariable { name, operation, value } => {
-                self.execute_modify_variable(name, *operation, *value)
-            }
+            GameEvent::ModifyVariable {
+                name,
+                operation,
+                value,
+            } => self.execute_modify_variable(name, *operation, *value),
 
-            GameEvent::StartQuest { quest_id } => {
-                self.execute_start_quest(*quest_id, world)
-            }
+            GameEvent::StartQuest { quest_id } => self.execute_start_quest(*quest_id, world),
 
-            GameEvent::UpdateQuest { quest_id, objective_id, progress } => {
-                self.execute_update_quest(*quest_id, *objective_id, *progress, world)
-            }
+            GameEvent::UpdateQuest {
+                quest_id,
+                objective_id,
+                progress,
+            } => self.execute_update_quest(*quest_id, *objective_id, *progress, world),
 
-            GameEvent::CompleteQuest { quest_id } => {
-                self.execute_complete_quest(*quest_id, world)
-            }
+            GameEvent::CompleteQuest { quest_id } => self.execute_complete_quest(*quest_id, world),
 
-            GameEvent::Delay { seconds } => {
-                self.execute_delay(*seconds)
-            }
+            GameEvent::Delay { seconds } => self.execute_delay(*seconds),
 
-            GameEvent::Branch { condition, true_branch, false_branch } => {
-                self.execute_branch(condition, true_branch, false_branch, world)
-            }
+            GameEvent::Branch {
+                condition,
+                true_branch,
+                false_branch,
+            } => self.execute_branch(condition, true_branch, false_branch, world),
 
-            GameEvent::Loop { count, body } => {
-                self.execute_loop(*count, body, world)
-            }
+            GameEvent::Loop { count, body } => self.execute_loop(*count, body, world),
 
             GameEvent::WhileLoop { condition, body } => {
                 self.execute_while_loop(condition, body, world)
             }
 
-            GameEvent::Parallel { branches } => {
-                self.execute_parallel(branches, world)
-            }
+            GameEvent::Parallel { branches } => self.execute_parallel(branches, world),
 
             GameEvent::Break => {
                 self.break_requested = true;
@@ -420,7 +427,11 @@ impl ScriptExecutor {
         transition: &str,
         _world: &mut World,
     ) -> ExecutionResult<()> {
-        tracing::debug!("Start battle {} with transition {}", encounter_id, transition);
+        tracing::debug!(
+            "Start battle {} with transition {}",
+            encounter_id,
+            transition
+        );
         Ok(())
     }
 
@@ -579,7 +590,9 @@ impl ScriptExecutor {
 
     fn execute_delay(&mut self, seconds: f32) -> ExecutionResult<()> {
         tracing::debug!("Delay for {} seconds", seconds);
-        self.state = ExecutionState::Paused { resume_after: seconds };
+        self.state = ExecutionState::Paused {
+            resume_after: seconds,
+        };
         Ok(())
     }
 
@@ -687,7 +700,11 @@ impl ScriptExecutor {
 
     // ==================== Condition Evaluation ====================
 
-    fn evaluate_condition(&self, condition: &Condition, world: &mut World) -> ExecutionResult<bool> {
+    fn evaluate_condition(
+        &self,
+        condition: &Condition,
+        world: &mut World,
+    ) -> ExecutionResult<bool> {
         match condition {
             Condition::Literal(value) => Ok(*value),
 
@@ -697,7 +714,11 @@ impl ScriptExecutor {
                 Ok(true) // Placeholder
             }
 
-            Condition::StatCheck { stat, operator, value } => {
+            Condition::StatCheck {
+                stat,
+                operator,
+                value,
+            } => {
                 let actual_value = self.get_stat_value(*stat, world)?;
                 Ok(compare_values(actual_value, *operator, *value))
             }
@@ -724,14 +745,14 @@ impl ScriptExecutor {
                 Ok(true) // Placeholder
             }
 
-            Condition::Compare { left, operator, right } => {
+            Condition::Compare {
+                left,
+                operator,
+                right,
+            } => {
                 let left_val = self.evaluate_value_source(left, world)?;
                 let right_val = self.evaluate_value_source(right, world)?;
-                Ok(compare_values(
-                    left_val as i32,
-                    *operator,
-                    right_val as i32,
-                ))
+                Ok(compare_values(left_val as i32, *operator, right_val as i32))
             }
 
             Condition::And(a, b) => {
@@ -752,14 +773,17 @@ impl ScriptExecutor {
         Ok(100) // Placeholder
     }
 
-    fn evaluate_value_source(&self, source: &ValueSource, _world: &mut World) -> ExecutionResult<f64> {
+    fn evaluate_value_source(
+        &self,
+        source: &ValueSource,
+        _world: &mut World,
+    ) -> ExecutionResult<f64> {
         match source {
             ValueSource::Literal(value) => Ok(*value),
-            ValueSource::Variable(name) => {
-                self.get_variable(name)
-                    .map(|v| v.as_number())
-                    .ok_or_else(|| ExecutionError::UnknownVariable(name.clone()))
-            }
+            ValueSource::Variable(name) => self
+                .get_variable(name)
+                .map(|v| v.as_number())
+                .ok_or_else(|| ExecutionError::UnknownVariable(name.clone())),
             ValueSource::Stat { entity, stat } => {
                 // Query entity stat
                 tracing::debug!("Get stat {:?} for entity {:?}", stat, entity);
@@ -775,7 +799,9 @@ impl ScriptExecutor {
             if new_time <= 0.0 {
                 self.state = ExecutionState::Running;
             } else {
-                self.state = ExecutionState::Paused { resume_after: new_time };
+                self.state = ExecutionState::Paused {
+                    resume_after: new_time,
+                };
             }
         }
         Ok(())
@@ -873,8 +899,8 @@ impl ScriptRegistry {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::compiler::CompiledScript;
+    use super::*;
 
     #[test]
     fn test_script_value_conversions() {
@@ -904,7 +930,9 @@ mod tests {
         );
 
         // Modify variable
-        executor.execute_modify_variable("test_var", MathOp::Add, 5).unwrap();
+        executor
+            .execute_modify_variable("test_var", MathOp::Add, 5)
+            .unwrap();
         assert_eq!(
             executor.get_variable("test_var"),
             Some(&ScriptValue::Number(15.0))

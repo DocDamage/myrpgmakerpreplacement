@@ -10,5 +10,7 @@
 pub mod encryption;
 pub mod manager;
 
-pub use encryption::{EncryptedSave, EncryptionError, encrypt_save, decrypt_save, verify_password, generate_password};
-pub use manager::{SaveManager, SaveConfig, SaveMetadata, SaveError};
+pub use encryption::{
+    decrypt_save, encrypt_save, generate_password, verify_password, EncryptedSave, EncryptionError,
+};
+pub use manager::{SaveConfig, SaveError, SaveManager, SaveMetadata};

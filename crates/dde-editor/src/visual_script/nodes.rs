@@ -85,11 +85,21 @@ pub enum NodeType {
     /// Move entity to position
     MoveEntity { x: i32, y: i32, relative: bool },
     /// Play animation
-    PlayAnimation { anim_id: u32, target: AnimationTarget },
+    PlayAnimation {
+        anim_id: u32,
+        target: AnimationTarget,
+    },
     /// Start a battle
-    StartBattle { encounter_id: u32, transition: String },
+    StartBattle {
+        encounter_id: u32,
+        transition: String,
+    },
     /// Show dialogue
-    ShowDialogue { text: String, speaker: String, portrait: Option<u32> },
+    ShowDialogue {
+        text: String,
+        speaker: String,
+        portrait: Option<u32>,
+    },
     /// Modify a variable
     ModifyVariable {
         name: String,
@@ -107,11 +117,7 @@ pub enum NodeType {
     /// Change background music
     ChangeBgm { bgm_id: String, fade_ms: u32 },
     /// Spawn entity
-    SpawnEntity {
-        template_id: u32,
-        x: i32,
-        y: i32,
-    },
+    SpawnEntity { template_id: u32, x: i32, y: i32 },
     /// Despawn entity
     DespawnEntity { entity_ref: EntityRef },
     /// Set game flag
@@ -510,7 +516,8 @@ impl Node {
 
             // Flow control
             NodeType::Branch => {
-                self.inputs.push(Pin::data_in("Condition", PinType::Boolean));
+                self.inputs
+                    .push(Pin::data_in("Condition", PinType::Boolean));
                 self.inputs.push(Pin::exec_in("In"));
                 self.outputs.push(Pin::exec_out("True"));
                 self.outputs.push(Pin::exec_out("False"));
@@ -521,7 +528,8 @@ impl Node {
                 self.outputs.push(Pin::exec_out("Completed"));
             }
             NodeType::WhileLoop => {
-                self.inputs.push(Pin::data_in("Condition", PinType::Boolean));
+                self.inputs
+                    .push(Pin::data_in("Condition", PinType::Boolean));
                 self.inputs.push(Pin::exec_in("In"));
                 self.outputs.push(Pin::exec_out("Body"));
                 self.outputs.push(Pin::exec_out("Completed"));
@@ -549,41 +557,44 @@ impl Node {
 
             // Variable nodes
             NodeType::GetVariable { name } => {
-                self.properties
-                    .insert("variable_name".to_string(), NodeProperty::String(name.clone()));
+                self.properties.insert(
+                    "variable_name".to_string(),
+                    NodeProperty::String(name.clone()),
+                );
                 self.outputs.push(Pin::data_out("Value", PinType::Any));
             }
             NodeType::SetVariable { name } => {
-                self.properties
-                    .insert("variable_name".to_string(), NodeProperty::String(name.clone()));
+                self.properties.insert(
+                    "variable_name".to_string(),
+                    NodeProperty::String(name.clone()),
+                );
                 self.inputs.push(Pin::exec_in("In"));
-                self.inputs.push(Pin::data_in("Value", PinType::Any).optional());
+                self.inputs
+                    .push(Pin::data_in("Value", PinType::Any).optional());
                 self.outputs.push(Pin::exec_out("Then"));
             }
             NodeType::BoolLiteral { value } => {
-                self.properties.insert(
-                    "value".to_string(),
-                    NodeProperty::Bool(*value),
-                );
+                self.properties
+                    .insert("value".to_string(), NodeProperty::Bool(*value));
                 self.outputs.push(Pin::data_out("Value", PinType::Boolean));
             }
             NodeType::NumberLiteral { value } => {
-                self.properties.insert(
-                    "value".to_string(),
-                    NodeProperty::Number(*value),
-                );
+                self.properties
+                    .insert("value".to_string(), NodeProperty::Number(*value));
                 self.outputs.push(Pin::data_out("Value", PinType::Number));
             }
             NodeType::StringLiteral { value } => {
-                self.properties.insert(
-                    "value".to_string(),
-                    NodeProperty::String(value.clone()),
-                );
+                self.properties
+                    .insert("value".to_string(), NodeProperty::String(value.clone()));
                 self.outputs.push(Pin::data_out("Value", PinType::String));
             }
 
             // Math nodes
-            NodeType::Add | NodeType::Subtract | NodeType::Multiply | NodeType::Divide | NodeType::Modulo => {
+            NodeType::Add
+            | NodeType::Subtract
+            | NodeType::Multiply
+            | NodeType::Divide
+            | NodeType::Modulo => {
                 self.inputs.push(Pin::data_in("A", PinType::Number));
                 self.inputs.push(Pin::data_in("B", PinType::Number));
                 self.outputs.push(Pin::data_out("Result", PinType::Number));
@@ -602,7 +613,8 @@ impl Node {
             }
             NodeType::GetPosition { .. } => {
                 self.inputs.push(Pin::data_in("Entity", PinType::Entity));
-                self.outputs.push(Pin::data_out("Position", PinType::Vector));
+                self.outputs
+                    .push(Pin::data_out("Position", PinType::Vector));
             }
             NodeType::GetStat { stat, .. } => {
                 self.inputs.push(Pin::data_in("Entity", PinType::Entity));
@@ -623,7 +635,8 @@ impl Node {
                 self.outputs.push(Pin::exec_out("Then"));
             }
             NodeType::FindNearest { .. } => {
-                self.inputs.push(Pin::data_in("Origin", PinType::Vector).optional());
+                self.inputs
+                    .push(Pin::data_in("Origin", PinType::Vector).optional());
                 self.outputs.push(Pin::data_out("Entity", PinType::Entity));
                 self.outputs.push(Pin::data_out("Found", PinType::Boolean));
             }
@@ -642,14 +655,26 @@ impl Node {
             NodeType::OnBattleStart { encounter_id } => format!("On Battle {}", encounter_id),
             NodeType::OnTick => "On Tick".to_string(),
             NodeType::OnStep { x, y } => format!("On Step ({}, {})", x, y),
-            NodeType::HasItem { item_id, quantity } => format!("Has Item {} x{}", item_id, quantity),
-            NodeType::StatCheck { stat, operator, value } => {
+            NodeType::HasItem { item_id, quantity } => {
+                format!("Has Item {} x{}", item_id, quantity)
+            }
+            NodeType::StatCheck {
+                stat,
+                operator,
+                value,
+            } => {
                 format!("{} {} {}", stat.display_name(), operator.symbol(), value)
             }
-            NodeType::QuestStage { quest_id, stage } => format!("Quest {} at Stage {}", quest_id, stage),
-            NodeType::TimeOfDay { min_hour, max_hour } => format!("Time {}:00-{}:00", min_hour, max_hour),
+            NodeType::QuestStage { quest_id, stage } => {
+                format!("Quest {} at Stage {}", quest_id, stage)
+            }
+            NodeType::TimeOfDay { min_hour, max_hour } => {
+                format!("Time {}:00-{}:00", min_hour, max_hour)
+            }
             NodeType::RandomChance { percent } => format!("{}% Chance", percent),
-            NodeType::GameFlag { flag_key, expected } => format!("Flag '{}' is {}", flag_key, expected),
+            NodeType::GameFlag { flag_key, expected } => {
+                format!("Flag '{}' is {}", flag_key, expected)
+            }
             NodeType::Compare { .. } => "Compare".to_string(),
             NodeType::MoveEntity { x, y, relative } => {
                 if *relative {
@@ -661,17 +686,29 @@ impl Node {
             NodeType::PlayAnimation { anim_id, .. } => format!("Play Animation {}", anim_id),
             NodeType::StartBattle { encounter_id, .. } => format!("Start Battle {}", encounter_id),
             NodeType::ShowDialogue { speaker, .. } => format!("Dialogue: {}", speaker),
-            NodeType::ModifyVariable { name, operation, value } => {
+            NodeType::ModifyVariable {
+                name,
+                operation,
+                value,
+            } => {
                 format!("{} {} {}", name, operation.symbol(), value)
             }
-            NodeType::GiveItem { item_id, quantity } => format!("Give Item {} x{}", item_id, quantity),
-            NodeType::RemoveItem { item_id, quantity } => format!("Remove Item {} x{}", item_id, quantity),
+            NodeType::GiveItem { item_id, quantity } => {
+                format!("Give Item {} x{}", item_id, quantity)
+            }
+            NodeType::RemoveItem { item_id, quantity } => {
+                format!("Remove Item {} x{}", item_id, quantity)
+            }
             NodeType::Teleport { map_id, x, y } => format!("Teleport to {}:{},{}", map_id, x, y),
             NodeType::PlaySfx { sound_id } => format!("Play SFX: {}", sound_id),
             NodeType::ChangeBgm { bgm_id, .. } => format!("Change BGM: {}", bgm_id),
-            NodeType::SpawnEntity { template_id, x, y } => format!("Spawn {} at {},{})", template_id, x, y),
+            NodeType::SpawnEntity { template_id, x, y } => {
+                format!("Spawn {} at {},{})", template_id, x, y)
+            }
             NodeType::DespawnEntity { .. } => "Despawn Entity".to_string(),
-            NodeType::SetGameFlag { flag_key, value } => format!("Set Flag '{}' = {}", flag_key, value),
+            NodeType::SetGameFlag { flag_key, value } => {
+                format!("Set Flag '{}' = {}", flag_key, value)
+            }
             NodeType::StartQuest { quest_id } => format!("Start Quest {}", quest_id),
             NodeType::UpdateQuest { quest_id, .. } => format!("Update Quest {}", quest_id),
             NodeType::CompleteQuest { quest_id } => format!("Complete Quest {}", quest_id),
@@ -711,7 +748,9 @@ impl Node {
             NodeType::GetStat { stat, .. } => format!("Get {}", stat.display_name()),
             NodeType::SetStat { stat, .. } => format!("Set {}", stat.display_name()),
             NodeType::FindNearest { entity_type, .. } => format!("Find Nearest {}", entity_type),
-            NodeType::GetEntitiesInRegion { region_id } => format!("Entities in Region {}", region_id),
+            NodeType::GetEntitiesInRegion { region_id } => {
+                format!("Entities in Region {}", region_id)
+            }
         }
     }
 
@@ -823,22 +862,30 @@ impl Node {
 
     /// Get all execution input pins
     pub fn exec_inputs(&self) -> impl Iterator<Item = &Pin> {
-        self.inputs.iter().filter(|p| p.pin_type == PinType::Execution)
+        self.inputs
+            .iter()
+            .filter(|p| p.pin_type == PinType::Execution)
     }
 
     /// Get all execution output pins
     pub fn exec_outputs(&self) -> impl Iterator<Item = &Pin> {
-        self.outputs.iter().filter(|p| p.pin_type == PinType::Execution)
+        self.outputs
+            .iter()
+            .filter(|p| p.pin_type == PinType::Execution)
     }
 
     /// Get all data input pins
     pub fn data_inputs(&self) -> impl Iterator<Item = &Pin> {
-        self.inputs.iter().filter(|p| p.pin_type != PinType::Execution)
+        self.inputs
+            .iter()
+            .filter(|p| p.pin_type != PinType::Execution)
     }
 
     /// Get all data output pins
     pub fn data_outputs(&self) -> impl Iterator<Item = &Pin> {
-        self.outputs.iter().filter(|p| p.pin_type != PinType::Execution)
+        self.outputs
+            .iter()
+            .filter(|p| p.pin_type != PinType::Execution)
     }
 }
 
@@ -914,50 +961,183 @@ pub fn get_node_categories() -> Vec<NodeCategory> {
             name: "Events",
             color: egui::Color32::from_rgb(220, 180, 50),
             node_types: vec![
-                NodeTypeTemplate::new("On Interact", "Triggered when player interacts with this entity", || NodeType::OnInteract),
-                NodeTypeTemplate::new("On Enter Region", "Triggered when entity enters a region", || NodeType::OnEnterRegion { region_id: 0 }),
-                NodeTypeTemplate::new("On Item Use", "Triggered when an item is used", || NodeType::OnItemUse { item_id: 0 }),
-                NodeTypeTemplate::new("On Battle Start", "Triggered when battle starts", || NodeType::OnBattleStart { encounter_id: 0 }),
+                NodeTypeTemplate::new(
+                    "On Interact",
+                    "Triggered when player interacts with this entity",
+                    || NodeType::OnInteract,
+                ),
+                NodeTypeTemplate::new(
+                    "On Enter Region",
+                    "Triggered when entity enters a region",
+                    || NodeType::OnEnterRegion { region_id: 0 },
+                ),
+                NodeTypeTemplate::new("On Item Use", "Triggered when an item is used", || {
+                    NodeType::OnItemUse { item_id: 0 }
+                }),
+                NodeTypeTemplate::new("On Battle Start", "Triggered when battle starts", || {
+                    NodeType::OnBattleStart { encounter_id: 0 }
+                }),
                 NodeTypeTemplate::new("On Tick", "Triggered every game tick", || NodeType::OnTick),
-                NodeTypeTemplate::new("On Step", "Triggered when player steps on tile", || NodeType::OnStep { x: 0, y: 0 }),
+                NodeTypeTemplate::new("On Step", "Triggered when player steps on tile", || {
+                    NodeType::OnStep { x: 0, y: 0 }
+                }),
             ],
         },
         NodeCategory {
             name: "Conditions",
             color: egui::Color32::from_rgb(150, 80, 180),
             node_types: vec![
-                NodeTypeTemplate::new("Has Item", "Check if player has item", || NodeType::HasItem { item_id: 0, quantity: 1 }),
-                NodeTypeTemplate::new("Stat Check", "Check stat value", || NodeType::StatCheck { stat: StatType::Health, operator: CompareOp::GreaterThan, value: 0 }),
-                NodeTypeTemplate::new("Quest Stage", "Check quest progress", || NodeType::QuestStage { quest_id: 0, stage: 0 }),
-                NodeTypeTemplate::new("Time of Day", "Check current time", || NodeType::TimeOfDay { min_hour: 6, max_hour: 18 }),
-                NodeTypeTemplate::new("Random Chance", "Random probability check", || NodeType::RandomChance { percent: 50 }),
-                NodeTypeTemplate::new("Game Flag", "Check game flag value", || NodeType::GameFlag { flag_key: String::new(), expected: true }),
-                NodeTypeTemplate::new("Compare", "Compare two values", || NodeType::Compare { left: ValueSource::Literal(0.0), operator: CompareOp::Equal, right: ValueSource::Literal(0.0) }),
+                NodeTypeTemplate::new("Has Item", "Check if player has item", || {
+                    NodeType::HasItem {
+                        item_id: 0,
+                        quantity: 1,
+                    }
+                }),
+                NodeTypeTemplate::new("Stat Check", "Check stat value", || NodeType::StatCheck {
+                    stat: StatType::Health,
+                    operator: CompareOp::GreaterThan,
+                    value: 0,
+                }),
+                NodeTypeTemplate::new("Quest Stage", "Check quest progress", || {
+                    NodeType::QuestStage {
+                        quest_id: 0,
+                        stage: 0,
+                    }
+                }),
+                NodeTypeTemplate::new("Time of Day", "Check current time", || {
+                    NodeType::TimeOfDay {
+                        min_hour: 6,
+                        max_hour: 18,
+                    }
+                }),
+                NodeTypeTemplate::new("Random Chance", "Random probability check", || {
+                    NodeType::RandomChance { percent: 50 }
+                }),
+                NodeTypeTemplate::new("Game Flag", "Check game flag value", || {
+                    NodeType::GameFlag {
+                        flag_key: String::new(),
+                        expected: true,
+                    }
+                }),
+                NodeTypeTemplate::new("Compare", "Compare two values", || NodeType::Compare {
+                    left: ValueSource::Literal(0.0),
+                    operator: CompareOp::Equal,
+                    right: ValueSource::Literal(0.0),
+                }),
             ],
         },
         NodeCategory {
             name: "Actions",
             color: egui::Color32::from_rgb(60, 130, 220),
             node_types: vec![
-                NodeTypeTemplate::new("Move Entity", "Move entity to position", || NodeType::MoveEntity { x: 0, y: 0, relative: false }),
-                NodeTypeTemplate::new("Play Animation", "Play animation on entity", || NodeType::PlayAnimation { anim_id: 0, target: AnimationTarget::SelfEntity }),
-                NodeTypeTemplate::new("Start Battle", "Start a battle encounter", || NodeType::StartBattle { encounter_id: 0, transition: String::from("swirl") }),
-                NodeTypeTemplate::new("Show Dialogue", "Show dialogue text", || NodeType::ShowDialogue { text: String::new(), speaker: String::new(), portrait: None }),
-                NodeTypeTemplate::new("Modify Variable", "Modify a game variable", || NodeType::ModifyVariable { name: String::new(), operation: MathOp::Set, value: 0 }),
-                NodeTypeTemplate::new("Give Item", "Give item to player", || NodeType::GiveItem { item_id: 0, quantity: 1 }),
-                NodeTypeTemplate::new("Remove Item", "Remove item from player", || NodeType::RemoveItem { item_id: 0, quantity: 1 }),
-                NodeTypeTemplate::new("Teleport", "Teleport player to location", || NodeType::Teleport { map_id: 0, x: 0, y: 0 }),
-                NodeTypeTemplate::new("Play SFX", "Play sound effect", || NodeType::PlaySfx { sound_id: String::new() }),
-                NodeTypeTemplate::new("Change BGM", "Change background music", || NodeType::ChangeBgm { bgm_id: String::new(), fade_ms: 1000 }),
-                NodeTypeTemplate::new("Spawn Entity", "Spawn an entity", || NodeType::SpawnEntity { template_id: 0, x: 0, y: 0 }),
-                NodeTypeTemplate::new("Despawn Entity", "Remove an entity", || NodeType::DespawnEntity { entity_ref: EntityRef::Target }),
-                NodeTypeTemplate::new("Set Game Flag", "Set a game flag", || NodeType::SetGameFlag { flag_key: String::new(), value: true }),
-                NodeTypeTemplate::new("Start Quest", "Start a quest", || NodeType::StartQuest { quest_id: 0 }),
-                NodeTypeTemplate::new("Update Quest", "Update quest progress", || NodeType::UpdateQuest { quest_id: 0, objective_id: 0, progress: 1 }),
-                NodeTypeTemplate::new("Complete Quest", "Complete a quest", || NodeType::CompleteQuest { quest_id: 0 }),
-                NodeTypeTemplate::new("Show Notification", "Show UI notification", || NodeType::ShowNotification { text: String::new(), duration_secs: 3.0 }),
-                NodeTypeTemplate::new("Modify Health", "Apply damage or healing", || NodeType::ModifyHealth { target: EntityRef::Target, amount: 0 }),
-                NodeTypeTemplate::new("Grant EXP", "Give experience points", || NodeType::GrantExp { target: EntityRef::Target, amount: 0 }),
+                NodeTypeTemplate::new("Move Entity", "Move entity to position", || {
+                    NodeType::MoveEntity {
+                        x: 0,
+                        y: 0,
+                        relative: false,
+                    }
+                }),
+                NodeTypeTemplate::new("Play Animation", "Play animation on entity", || {
+                    NodeType::PlayAnimation {
+                        anim_id: 0,
+                        target: AnimationTarget::SelfEntity,
+                    }
+                }),
+                NodeTypeTemplate::new("Start Battle", "Start a battle encounter", || {
+                    NodeType::StartBattle {
+                        encounter_id: 0,
+                        transition: String::from("swirl"),
+                    }
+                }),
+                NodeTypeTemplate::new("Show Dialogue", "Show dialogue text", || {
+                    NodeType::ShowDialogue {
+                        text: String::new(),
+                        speaker: String::new(),
+                        portrait: None,
+                    }
+                }),
+                NodeTypeTemplate::new("Modify Variable", "Modify a game variable", || {
+                    NodeType::ModifyVariable {
+                        name: String::new(),
+                        operation: MathOp::Set,
+                        value: 0,
+                    }
+                }),
+                NodeTypeTemplate::new("Give Item", "Give item to player", || NodeType::GiveItem {
+                    item_id: 0,
+                    quantity: 1,
+                }),
+                NodeTypeTemplate::new("Remove Item", "Remove item from player", || {
+                    NodeType::RemoveItem {
+                        item_id: 0,
+                        quantity: 1,
+                    }
+                }),
+                NodeTypeTemplate::new("Teleport", "Teleport player to location", || {
+                    NodeType::Teleport {
+                        map_id: 0,
+                        x: 0,
+                        y: 0,
+                    }
+                }),
+                NodeTypeTemplate::new("Play SFX", "Play sound effect", || NodeType::PlaySfx {
+                    sound_id: String::new(),
+                }),
+                NodeTypeTemplate::new("Change BGM", "Change background music", || {
+                    NodeType::ChangeBgm {
+                        bgm_id: String::new(),
+                        fade_ms: 1000,
+                    }
+                }),
+                NodeTypeTemplate::new("Spawn Entity", "Spawn an entity", || {
+                    NodeType::SpawnEntity {
+                        template_id: 0,
+                        x: 0,
+                        y: 0,
+                    }
+                }),
+                NodeTypeTemplate::new("Despawn Entity", "Remove an entity", || {
+                    NodeType::DespawnEntity {
+                        entity_ref: EntityRef::Target,
+                    }
+                }),
+                NodeTypeTemplate::new("Set Game Flag", "Set a game flag", || {
+                    NodeType::SetGameFlag {
+                        flag_key: String::new(),
+                        value: true,
+                    }
+                }),
+                NodeTypeTemplate::new("Start Quest", "Start a quest", || NodeType::StartQuest {
+                    quest_id: 0,
+                }),
+                NodeTypeTemplate::new("Update Quest", "Update quest progress", || {
+                    NodeType::UpdateQuest {
+                        quest_id: 0,
+                        objective_id: 0,
+                        progress: 1,
+                    }
+                }),
+                NodeTypeTemplate::new("Complete Quest", "Complete a quest", || {
+                    NodeType::CompleteQuest { quest_id: 0 }
+                }),
+                NodeTypeTemplate::new("Show Notification", "Show UI notification", || {
+                    NodeType::ShowNotification {
+                        text: String::new(),
+                        duration_secs: 3.0,
+                    }
+                }),
+                NodeTypeTemplate::new("Modify Health", "Apply damage or healing", || {
+                    NodeType::ModifyHealth {
+                        target: EntityRef::Target,
+                        amount: 0,
+                    }
+                }),
+                NodeTypeTemplate::new("Grant EXP", "Give experience points", || {
+                    NodeType::GrantExp {
+                        target: EntityRef::Target,
+                        amount: 0,
+                    }
+                }),
             ],
         },
         NodeCategory {
@@ -967,8 +1147,12 @@ pub fn get_node_categories() -> Vec<NodeCategory> {
                 NodeTypeTemplate::new("Branch", "Branch based on condition", || NodeType::Branch),
                 NodeTypeTemplate::new("Loop", "Loop N times", || NodeType::Loop { count: 3 }),
                 NodeTypeTemplate::new("While Loop", "Loop while condition", || NodeType::WhileLoop),
-                NodeTypeTemplate::new("For Each", "Iterate collection", || NodeType::ForEach { collection: CollectionType::Party }),
-                NodeTypeTemplate::new("Delay", "Wait for duration", || NodeType::Delay { seconds: 1.0 }),
+                NodeTypeTemplate::new("For Each", "Iterate collection", || NodeType::ForEach {
+                    collection: CollectionType::Party,
+                }),
+                NodeTypeTemplate::new("Delay", "Wait for duration", || NodeType::Delay {
+                    seconds: 1.0,
+                }),
                 NodeTypeTemplate::new("Parallel", "Execute in parallel", || NodeType::Parallel),
                 NodeTypeTemplate::new("Sequence", "Execute in sequence", || NodeType::Sequence),
                 NodeTypeTemplate::new("Join", "Wait for parallel branches", || NodeType::Join),
@@ -980,11 +1164,27 @@ pub fn get_node_categories() -> Vec<NodeCategory> {
             name: "Variables",
             color: egui::Color32::from_rgb(50, 180, 180),
             node_types: vec![
-                NodeTypeTemplate::new("Get Variable", "Read variable value", || NodeType::GetVariable { name: String::new() }),
-                NodeTypeTemplate::new("Set Variable", "Write variable value", || NodeType::SetVariable { name: String::new() }),
-                NodeTypeTemplate::new("Bool Literal", "True/False constant", || NodeType::BoolLiteral { value: false }),
-                NodeTypeTemplate::new("Number Literal", "Number constant", || NodeType::NumberLiteral { value: 0.0 }),
-                NodeTypeTemplate::new("String Literal", "Text constant", || NodeType::StringLiteral { value: String::new() }),
+                NodeTypeTemplate::new("Get Variable", "Read variable value", || {
+                    NodeType::GetVariable {
+                        name: String::new(),
+                    }
+                }),
+                NodeTypeTemplate::new("Set Variable", "Write variable value", || {
+                    NodeType::SetVariable {
+                        name: String::new(),
+                    }
+                }),
+                NodeTypeTemplate::new("Bool Literal", "True/False constant", || {
+                    NodeType::BoolLiteral { value: false }
+                }),
+                NodeTypeTemplate::new("Number Literal", "Number constant", || {
+                    NodeType::NumberLiteral { value: 0.0 }
+                }),
+                NodeTypeTemplate::new("String Literal", "Text constant", || {
+                    NodeType::StringLiteral {
+                        value: String::new(),
+                    }
+                }),
             ],
         },
         NodeCategory {
@@ -996,8 +1196,14 @@ pub fn get_node_categories() -> Vec<NodeCategory> {
                 NodeTypeTemplate::new("Multiply", "A * B", || NodeType::Multiply),
                 NodeTypeTemplate::new("Divide", "A / B", || NodeType::Divide),
                 NodeTypeTemplate::new("Modulo", "A % B", || NodeType::Modulo),
-                NodeTypeTemplate::new("Clamp", "Clamp to range", || NodeType::Clamp { min: 0.0, max: 1.0 }),
-                NodeTypeTemplate::new("Random Range", "Random number", || NodeType::RandomRange { min: 0.0, max: 1.0 }),
+                NodeTypeTemplate::new("Clamp", "Clamp to range", || NodeType::Clamp {
+                    min: 0.0,
+                    max: 1.0,
+                }),
+                NodeTypeTemplate::new("Random Range", "Random number", || NodeType::RandomRange {
+                    min: 0.0,
+                    max: 1.0,
+                }),
             ],
         },
         NodeCategory {
@@ -1005,11 +1211,28 @@ pub fn get_node_categories() -> Vec<NodeCategory> {
             color: egui::Color32::from_rgb(200, 80, 80),
             node_types: vec![
                 NodeTypeTemplate::new("Get Player", "Get player entity", || NodeType::GetPlayer),
-                NodeTypeTemplate::new("Get Position", "Get entity position", || NodeType::GetPosition { entity: EntityRef::SelfEntity }),
-                NodeTypeTemplate::new("Get Stat", "Read entity stat", || NodeType::GetStat { entity: EntityRef::SelfEntity, stat: StatType::Health }),
-                NodeTypeTemplate::new("Set Stat", "Write entity stat", || NodeType::SetStat { entity: EntityRef::SelfEntity, stat: StatType::Health }),
-                NodeTypeTemplate::new("Find Nearest", "Find closest entity", || NodeType::FindNearest { entity_type: String::new(), radius: 10.0 }),
-                NodeTypeTemplate::new("Get Entities In Region", "All entities in region", || NodeType::GetEntitiesInRegion { region_id: 0 }),
+                NodeTypeTemplate::new("Get Position", "Get entity position", || {
+                    NodeType::GetPosition {
+                        entity: EntityRef::SelfEntity,
+                    }
+                }),
+                NodeTypeTemplate::new("Get Stat", "Read entity stat", || NodeType::GetStat {
+                    entity: EntityRef::SelfEntity,
+                    stat: StatType::Health,
+                }),
+                NodeTypeTemplate::new("Set Stat", "Write entity stat", || NodeType::SetStat {
+                    entity: EntityRef::SelfEntity,
+                    stat: StatType::Health,
+                }),
+                NodeTypeTemplate::new("Find Nearest", "Find closest entity", || {
+                    NodeType::FindNearest {
+                        entity_type: String::new(),
+                        radius: 10.0,
+                    }
+                }),
+                NodeTypeTemplate::new("Get Entities In Region", "All entities in region", || {
+                    NodeType::GetEntitiesInRegion { region_id: 0 }
+                }),
             ],
         },
     ]
@@ -1047,7 +1270,14 @@ mod tests {
         let event_node = Node::new(NodeType::OnInteract, [0.0, 0.0]);
         assert!(event_node.is_event_node());
 
-        let action_node = Node::new(NodeType::MoveEntity { x: 0, y: 0, relative: false }, [0.0, 0.0]);
+        let action_node = Node::new(
+            NodeType::MoveEntity {
+                x: 0,
+                y: 0,
+                relative: false,
+            },
+            [0.0, 0.0],
+        );
         assert!(!action_node.is_event_node());
     }
 }

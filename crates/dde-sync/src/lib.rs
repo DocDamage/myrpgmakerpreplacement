@@ -3,16 +3,16 @@
 //! Provides multiplayer editing using CRDTs and WebSockets.
 
 pub mod client;
-pub mod server;
 pub mod crdt;
-pub mod protocol;
-pub mod presence;
 pub mod error;
 pub mod lock;
+pub mod presence;
+pub mod protocol;
+pub mod server;
 
 pub use client::SyncClient;
-pub use server::SyncServer;
-pub use protocol::{SyncMessage, Operation};
-pub use presence::{UserPresence, CursorPosition};
-pub use error::{SyncError, Result};
+pub use error::{Result, SyncError};
 pub use lock::LockManager;
+pub use presence::{CursorPosition, UserPresence};
+pub use protocol::{Operation, SyncMessage};
+pub use server::SyncServer;

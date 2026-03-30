@@ -48,3 +48,12 @@ sha2 = "0.10"
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "ecs_benchmarks"
+harness = false
+
+[[bench]]
+name = "simulation_benchmarks"
+harness = false

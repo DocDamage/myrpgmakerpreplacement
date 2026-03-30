@@ -43,12 +43,15 @@ pub mod nodes;
 
 // Re-export core types
 pub use canvas::{Connection, NodeCanvas, NodeGraph};
-pub use compiler::{compile_to_events, graph_to_json, graph_from_json, CompiledScript, CompileError, GameEvent, Condition, EntityRef, AnimationTarget};
-pub use execution::{ScriptExecutor, ScriptValue, ExecutionError, ExecutionState, ScriptRegistry};
+pub use compiler::{
+    compile_to_events, graph_from_json, graph_to_json, AnimationTarget, CompileError,
+    CompiledScript, Condition, EntityRef, GameEvent,
+};
+pub use execution::{ExecutionError, ExecutionState, ScriptExecutor, ScriptRegistry, ScriptValue};
 pub use nodes::{
-    get_node_categories, CollectionType, CompareOp, EntityRef as NodeEntityRef, MathOp, Node,
-    NodeCategory, NodeId, NodeProperty, NodeType, NodeTypeTemplate, Pin, PinId, PinType, PinValue,
-    StatType, ValueSource, AnimationTarget as NodeAnimationTarget,
+    get_node_categories, AnimationTarget as NodeAnimationTarget, CollectionType, CompareOp,
+    EntityRef as NodeEntityRef, MathOp, Node, NodeCategory, NodeId, NodeProperty, NodeType,
+    NodeTypeTemplate, Pin, PinId, PinType, PinValue, StatType, ValueSource,
 };
 
 /// Current version of the visual scripting system
@@ -78,15 +81,15 @@ impl Default for Features {
 /// Initialize the visual scripting system with the given features
 pub fn init(features: Features) {
     tracing::info!("Initializing Visual Scripting System v{}", VERSION);
-    
+
     if features.experimental_nodes {
         tracing::info!("Experimental nodes enabled");
     }
-    
+
     if features.live_reload {
         tracing::info!("Live reload enabled");
     }
-    
+
     if features.debug_viz {
         tracing::info!("Debug visualization enabled");
     }

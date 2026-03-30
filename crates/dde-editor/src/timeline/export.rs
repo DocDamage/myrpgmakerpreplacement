@@ -3,9 +3,9 @@
 //! Converts timeline tracks into a sequence of cutscene events that can be
 //! executed by the game engine.
 
+use super::editor::TimelineEditor;
 use super::keyframes::{EffectType, TrackValue, Vec3};
 use super::tracks::Track;
-use super::editor::TimelineEditor;
 use dde_core::{Direction4, Entity};
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +26,6 @@ pub fn export_to_events(timeline: &TimelineEditor) -> Vec<CutsceneEvent> {
     events.sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap());
 
     // Optimize: combine adjacent identical values
-    
 
     optimize_events(events)
 }
@@ -95,7 +94,9 @@ fn export_camera_track(track: &Track) -> Vec<CutsceneEvent> {
         let curr = &keyframes[i];
         let duration = curr.time - prev.time;
 
-        if let (TrackValue::Camera(prev_cam), TrackValue::Camera(curr_cam)) = (&prev.value, &curr.value) {
+        if let (TrackValue::Camera(prev_cam), TrackValue::Camera(curr_cam)) =
+            (&prev.value, &curr.value)
+        {
             // Camera movement
             if prev_cam.position != curr_cam.position {
                 events.push(CutsceneEvent {
@@ -126,7 +127,7 @@ fn export_camera_track(track: &Track) -> Vec<CutsceneEvent> {
                     time: prev.time,
                     event_type: CutsceneEventType::CameraRotate {
                         target: curr_cam.rotation,
-                duration,
+                        duration,
                         easing: curr.easing,
                     },
                 });
@@ -197,7 +198,9 @@ fn export_entity_track(track: &Track) -> Vec<CutsceneEvent> {
         let curr = &keyframes[i];
         let duration = curr.time - prev.time;
 
-        if let (TrackValue::Entity(prev_ent), TrackValue::Entity(curr_ent)) = (&prev.value, &curr.value) {
+        if let (TrackValue::Entity(prev_ent), TrackValue::Entity(curr_ent)) =
+            (&prev.value, &curr.value)
+        {
             // Movement
             if prev_ent.position != curr_ent.position {
                 events.push(CutsceneEvent {
@@ -297,10 +300,13 @@ fn export_effect_track(track: &Track) -> Vec<CutsceneEvent> {
         let prev = &keyframes[i - 1];
         let curr = &keyframes[i];
 
-        if let (TrackValue::Effect(prev_eff), TrackValue::Effect(curr_eff)) = (&prev.value, &curr.value) {
+        if let (TrackValue::Effect(prev_eff), TrackValue::Effect(curr_eff)) =
+            (&prev.value, &curr.value)
+        {
             // Effect type or intensity changed
-            if prev_eff.effect_type != curr_eff.effect_type ||
-               (prev_eff.intensity - curr_eff.intensity).abs() > f32::EPSILON {
+            if prev_eff.effect_type != curr_eff.effect_type
+                || (prev_eff.intensity - curr_eff.intensity).abs() > f32::EPSILON
+            {
                 events.push(CutsceneEvent {
                     time: curr.time,
                     event_type: CutsceneEventType::ScreenEffect {
@@ -382,10 +388,7 @@ pub enum CutsceneEventType {
         easing: super::keyframes::EasingFunction,
     },
     /// Shake camera
-    CameraShake {
-        amount: f32,
-        duration: f32,
-    },
+    CameraShake { amount: f32, duration: f32 },
     /// Set entity state immediately
     EntitySetState {
         entity: Entity,
@@ -406,15 +409,9 @@ pub enum CutsceneEventType {
         direction: Direction4,
     },
     /// Set entity visibility
-    EntitySetVisibility {
-        entity: Entity,
-        visible: bool,
-    },
+    EntitySetVisibility { entity: Entity, visible: bool },
     /// Play animation on entity
-    PlayAnimation {
-        entity: Entity,
-        anim_id: u32,
-    },
+    PlayAnimation { entity: Entity, anim_id: u32 },
     /// Play sound
     PlaySound {
         audio_id: u32,
@@ -444,9 +441,7 @@ pub enum CutsceneEventType {
         color: [f32; 3],
     },
     /// Wait for duration
-    Wait {
-        duration: f32,
-    },
+    Wait { duration: f32 },
     /// Wait for user input
     WaitForInput,
 }
@@ -483,14 +478,13 @@ impl CutsceneData {
 
     /// Get the event at or before a specific time
     pub fn events_at_time(&self, time: f32) -> Vec<&CutsceneEvent> {
-        self.events.iter()
-            .filter(|e| e.time <= time)
-            .collect()
+        self.events.iter().filter(|e| e.time <= time).collect()
     }
 
     /// Get all events in a time range
     pub fn events_in_range(&self, start: f32, end: f32) -> Vec<&CutsceneEvent> {
-        self.events.iter()
+        self.events
+            .iter()
             .filter(|e| e.time >= start && e.time <= end)
             .collect()
     }
@@ -545,26 +539,32 @@ pub fn export_to_events_with_options(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use super::super::keyframes::{CameraValue, EntityValue, DialogueValue, AudioValue, Vec3};
-    use super::super::tracks::{Track, TrackType};
     use super::super::editor::TimelineEditor;
+    use super::super::keyframes::{AudioValue, CameraValue, DialogueValue, EntityValue, Vec3};
+    use super::super::tracks::{Track, TrackType};
+    use super::*;
 
     #[test]
     fn test_export_camera_track() {
         let mut track = Track::new(TrackType::Camera, "Camera");
-        
-        track.add_keyframe(0.0, TrackValue::Camera(CameraValue {
-            position: Vec3::ZERO,
-            zoom: 1.0,
-            ..Default::default()
-        }));
-        
-        track.add_keyframe(2.0, TrackValue::Camera(CameraValue {
-            position: Vec3::new(10.0, 0.0, 0.0),
-            zoom: 2.0,
-            ..Default::default()
-        }));
+
+        track.add_keyframe(
+            0.0,
+            TrackValue::Camera(CameraValue {
+                position: Vec3::ZERO,
+                zoom: 1.0,
+                ..Default::default()
+            }),
+        );
+
+        track.add_keyframe(
+            2.0,
+            TrackValue::Camera(CameraValue {
+                position: Vec3::new(10.0, 0.0, 0.0),
+                zoom: 2.0,
+                ..Default::default()
+            }),
+        );
 
         let events = export_camera_track(&track);
         assert!(!events.is_empty());
@@ -574,11 +574,11 @@ mod tests {
     fn test_cutscene_data_serialization() {
         let mut timeline = TimelineEditor::new();
         timeline.duration = 10.0;
-        
+
         let data = CutsceneData::from_timeline(&timeline, "Test Cutscene");
         let json = data.to_json().unwrap();
         let restored = CutsceneData::from_json(&json).unwrap();
-        
+
         assert_eq!(data.name, restored.name);
         assert_eq!(data.duration, restored.duration);
     }

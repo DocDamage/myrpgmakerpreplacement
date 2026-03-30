@@ -66,7 +66,10 @@ impl LlmClient for DefaultLlmClient {
     async fn generate(&self, prompt: &str) -> DocResult<String> {
         // In production, this would call the actual LLM sidecar
         // For now, return a placeholder response
-        Ok(format!("Generated content for prompt: {}...", &prompt[..prompt.len().min(50)]))
+        Ok(format!(
+            "Generated content for prompt: {}...",
+            &prompt[..prompt.len().min(50)]
+        ))
     }
 }
 
@@ -94,10 +97,7 @@ impl DocGenerator {
     }
 
     /// Generate complete World Bible
-    pub async fn generate_world_bible(
-        &self,
-        db: &dyn WorldDataProvider,
-    ) -> DocResult<WorldBible> {
+    pub async fn generate_world_bible(&self, db: &dyn WorldDataProvider) -> DocResult<WorldBible> {
         // Collect all world data
         let world_data = self.collect_world_data(db).await?;
 
@@ -261,12 +261,10 @@ impl DocGenerator {
 
         if events.is_empty() {
             // Fallback events if parsing fails
-            events = vec![
-                HistoricalEvent {
-                    year: "Year 0".to_string(),
-                    description: "The beginning of recorded history".to_string(),
-                },
-            ];
+            events = vec![HistoricalEvent {
+                year: "Year 0".to_string(),
+                description: "The beginning of recorded history".to_string(),
+            }];
         }
 
         Ok(events)
@@ -475,9 +473,16 @@ impl DocGenerator {
             if let Some(header_end) = after_header.find('\n') {
                 let content = &after_header[header_end..];
                 // Find the next section header (numbered or ## style)
-                let next_section = content[1..].find(|c: char| c.is_ascii_digit() && content[1..].find(c).map(|i| content.chars().nth(i + 1) == Some('.')).unwrap_or(false))
+                let next_section = content[1..]
+                    .find(|c: char| {
+                        c.is_ascii_digit()
+                            && content[1..]
+                                .find(c)
+                                .map(|i| content.chars().nth(i + 1) == Some('.'))
+                                .unwrap_or(false)
+                    })
                     .or_else(|| content.find("##"));
-                
+
                 if let Some(end) = next_section {
                     return content[..end].trim().to_string();
                 }

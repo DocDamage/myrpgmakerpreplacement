@@ -10,9 +10,9 @@ use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Key, Nonce,
 };
+use pbkdf2::pbkdf2_hmac;
 use rand::rngs::OsRng;
 use rand::RngCore;
-use pbkdf2::pbkdf2_hmac;
 use sha2::Sha256;
 use thiserror::Error;
 

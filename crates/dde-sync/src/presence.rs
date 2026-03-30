@@ -115,7 +115,12 @@ pub struct Rect {
 
 impl Rect {
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     pub fn contains(&self, point: (f32, f32)) -> bool {
@@ -147,11 +152,11 @@ impl Default for Rect {
 fn generate_user_color(uuid: &Uuid) -> Color32 {
     let bytes = uuid.as_bytes();
     let hue = bytes[0] as f32 / 255.0;
-    
+
     // Convert HSL to RGB for vibrant colors
     let saturation = 0.8;
     let lightness = 0.5;
-    
+
     let c = (1.0 - f32::abs(2.0 * lightness - 1.0)) * saturation;
     let x = c * (1.0 - ((hue * 6.0) % 2.0 - 1.0).abs());
     let m = lightness - c / 2.0;
@@ -265,7 +270,7 @@ mod tests {
     fn test_user_presence_new() {
         let client_id = Uuid::new_v4();
         let presence = UserPresence::new(client_id, "TestUser".to_string());
-        
+
         assert_eq!(presence.client_id, client_id);
         assert_eq!(presence.username, "TestUser");
         assert!(matches!(presence.status, UserStatus::Active));

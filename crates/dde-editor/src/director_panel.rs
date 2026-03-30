@@ -4,7 +4,8 @@
 //! Shows quest proposals, active quests, tension graphs, and settings.
 
 use dde_ai::director::{
-    ActiveQuest, DirectorConfig, DirectorStats, DirectorSystem, QuestProposal, QuestStage, TensionCurve,
+    ActiveQuest, DirectorConfig, DirectorStats, DirectorSystem, QuestProposal, QuestStage,
+    TensionCurve,
 };
 
 /// Director panel UI state
@@ -115,10 +116,7 @@ impl DirectorPanel {
             ui.heading("AI Game Director");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if let Some(dir) = director.as_mut() {
-                    if ui
-                        .checkbox(&mut dir.enabled, "Enabled")
-                        .changed()
-                    {
+                    if ui.checkbox(&mut dir.enabled, "Enabled").changed() {
                         if dir.enabled {
                             self.show_status("Director enabled", false);
                         } else {
@@ -209,7 +207,10 @@ impl DirectorPanel {
             };
 
             ui.label("| Tension:");
-            ui.colored_label(tension_color, format!("{:.0}%", stats.current_tension * 100.0));
+            ui.colored_label(
+                tension_color,
+                format!("{:.0}%", stats.current_tension * 100.0),
+            );
 
             ui.label(format!(
                 "| Last Gen: {:.0}s ago",
@@ -268,9 +269,7 @@ impl DirectorPanel {
 
                 // Header row
                 ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new(proposal.quest_type.icon()).size(20.0),
-                    );
+                    ui.label(egui::RichText::new(proposal.quest_type.icon()).size(20.0));
                     ui.heading(&proposal.title);
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -301,7 +300,10 @@ impl DirectorPanel {
                         egui::Color32::RED
                     };
                     ui.label("Confidence:");
-                    ui.colored_label(conf_color, format!("{:.0}%", proposal.confidence_score * 100.0));
+                    ui.colored_label(
+                        conf_color,
+                        format!("{:.0}%", proposal.confidence_score * 100.0),
+                    );
                 });
 
                 // NPCs
@@ -423,9 +425,12 @@ impl DirectorPanel {
                                 ui.label("○");
                             }
                             ui.label(&obj.description);
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                ui.label(format!("{}/{}", obj.current, obj.required));
-                            });
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    ui.label(format!("{}/{}", obj.current, obj.required));
+                                },
+                            );
                         });
                     }
                 });
@@ -433,10 +438,11 @@ impl DirectorPanel {
                 // Actions
                 ui.horizontal(|ui| {
                     if quest.stage == QuestStage::ReadyForTurnIn
-                        && ui.button("✓ Complete").clicked() {
-                            director.complete_quest(quest.id);
-                            self.show_status(&format!("Completed: {}", quest.title), false);
-                        }
+                        && ui.button("✓ Complete").clicked()
+                    {
+                        director.complete_quest(quest.id);
+                        self.show_status(&format!("Completed: {}", quest.title), false);
+                    }
 
                     if ui.button("✗ Abandon").clicked() {
                         director.quest_pool.abandon_quest(quest.id);
@@ -637,10 +643,8 @@ impl DirectorPanel {
         let available_width = ui.available_width();
         let height = 100.0;
 
-        let (rect, _response) = ui.allocate_exact_size(
-            egui::vec2(available_width, height),
-            egui::Sense::hover(),
-        );
+        let (rect, _response) =
+            ui.allocate_exact_size(egui::vec2(available_width, height), egui::Sense::hover());
 
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
@@ -652,10 +656,7 @@ impl DirectorPanel {
             for i in 0..=4 {
                 let y = rect.top() + rect.height() * (i as f32 / 4.0);
                 painter.line_segment(
-                    [
-                        egui::pos2(rect.left(), y),
-                        egui::pos2(rect.right(), y),
-                    ],
+                    [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
                     ui.visuals().widgets.noninteractive.bg_stroke,
                 );
             }

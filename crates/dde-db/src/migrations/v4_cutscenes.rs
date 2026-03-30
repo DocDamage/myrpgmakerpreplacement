@@ -2,15 +2,15 @@
 //!
 //! Creates tables for storing cutscene timeline data.
 
-use rusqlite::Connection;
 use crate::Result;
+use rusqlite::Connection;
 
 /// Apply v4 migration
 pub fn apply(conn: &Connection) -> Result<()> {
     tracing::info!("Applying migration v4: Cutscene timeline tables");
 
     conn.execute_batch(V4_CUTSCENE_SCHEMA)?;
-    
+
     Ok(())
 }
 
@@ -74,31 +74,36 @@ mod tests {
     #[test]
     fn test_v4_migration() {
         let conn = Connection::open_in_memory().unwrap();
-        
+
         // Apply migration
         apply(&conn).unwrap();
-        
+
         // Verify tables exist
-        let count: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='cutscenes'",
-            [],
-            |row| row.get(0)
-        ).unwrap();
+        let count: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='cutscenes'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(count, 1);
-        
+
         // Verify we can insert
         conn.execute(
             "INSERT INTO cutscenes (uuid, name, duration, timeline_json, created_at, modified_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             ("test-uuid", "Test Cutscene", 30.0, "{}", 0i64, 0i64),
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         // Verify insert worked
-        let name: String = conn.query_row(
-            "SELECT name FROM cutscenes WHERE uuid = ?1",
-            ["test-uuid"],
-            |row| row.get(0)
-        ).unwrap();
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM cutscenes WHERE uuid = ?1",
+                ["test-uuid"],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(name, "Test Cutscene");
     }
 }

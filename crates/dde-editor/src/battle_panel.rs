@@ -25,7 +25,7 @@ enum BattleTab {
 
 /// Formation layout options
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum FormationLayout {
+pub enum FormationLayout {
     Balanced,
     Aggressive,
     Defensive,
@@ -188,7 +188,11 @@ impl BattlePanel {
 
         // Formation layout
         ui.label("Formation Layout:");
-        for layout in [FormationLayout::Balanced, FormationLayout::Aggressive, FormationLayout::Defensive] {
+        for layout in [
+            FormationLayout::Balanced,
+            FormationLayout::Aggressive,
+            FormationLayout::Defensive,
+        ] {
             ui.horizontal(|ui| {
                 let selected = self.formation_layout == layout;
                 if ui.radio(selected, layout.name()).clicked() && !selected {
@@ -239,14 +243,14 @@ impl BattlePanel {
     fn draw_formation_tab(&mut self, ui: &mut egui::Ui) {
         ui.heading("Formation Editor");
         ui.label("Configure party formation for battle positioning.");
-        
+
         ui.add_space(10.0);
 
         // Formation visualization placeholder
         ui.group(|ui| {
             ui.set_width(ui.available_width());
             ui.set_min_height(150.0);
-            
+
             ui.label("Back Row:");
             ui.horizontal(|ui| {
                 for i in 0..4 {
@@ -280,7 +284,7 @@ impl BattlePanel {
         ui.add_space(10.0);
 
         let entries = interface.get_battle_log();
-        
+
         if entries.is_empty() {
             ui.label("No battle actions recorded yet.");
         } else {
@@ -302,7 +306,7 @@ impl BattlePanel {
     fn draw_balance_tab(&mut self, ui: &mut egui::Ui) {
         ui.heading("Damage Balance Analysis");
         ui.label("Compare damage output across different configurations.");
-        
+
         ui.add_space(10.0);
 
         // Balance metrics placeholder
@@ -433,15 +437,15 @@ mod tests {
     #[test]
     fn test_mock_battle_interface() {
         let mut mock = MockBattleInterface::new();
-        
+
         assert!(!mock.is_battle_active());
         assert_eq!(mock.turn_number(), 0);
-        
+
         mock.start_test_battle(3, FormationLayout::Balanced);
         assert!(mock.is_battle_active());
         assert_eq!(mock.turn_number(), 1);
         assert_eq!(mock.alive_enemies(), 3);
-        
+
         mock.end_battle();
         assert!(!mock.is_battle_active());
     }

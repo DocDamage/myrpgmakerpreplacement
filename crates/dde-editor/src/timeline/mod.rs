@@ -31,16 +31,16 @@
 //! ```
 
 pub mod editor;
-pub mod tracks;
+pub mod export;
 pub mod keyframes;
 pub mod preview;
-pub mod export;
+pub mod tracks;
 
 pub use editor::TimelineEditor;
-pub use tracks::{Track, TrackType, TrackGroup};
-pub use keyframes::{Keyframe, Interpolation, EasingFunction, TrackValue, TrackId};
-pub use preview::{PreviewRenderer, PreviewFrame, PreviewCamera};
-pub use export::{export_to_events, CutsceneEvent, CutsceneData, ExportOptions};
+pub use export::{export_to_events, CutsceneData, CutsceneEvent, ExportOptions};
+pub use keyframes::{EasingFunction, Interpolation, Keyframe, TrackId, TrackValue};
+pub use preview::{PreviewCamera, PreviewFrame, PreviewRenderer};
+pub use tracks::{Track, TrackGroup, TrackType};
 
 use serde::{Deserialize, Serialize};
 
@@ -128,7 +128,9 @@ impl Cutscene {
 
     /// Get total keyframe count
     pub fn total_keyframes(&self) -> usize {
-        self.timeline.tracks.iter()
+        self.timeline
+            .tracks
+            .iter()
             .map(|t| t.keyframe_count())
             .sum()
     }
@@ -225,10 +227,11 @@ impl CutsceneLibrary {
     /// Search cutscenes by name or tag
     pub fn search(&self, query: &str) -> Vec<&Cutscene> {
         let query = query.to_lowercase();
-        self.cutscenes.iter()
+        self.cutscenes
+            .iter()
             .filter(|c| {
-                c.name.to_lowercase().contains(&query) ||
-                c.tags.iter().any(|t| t.to_lowercase().contains(&query))
+                c.name.to_lowercase().contains(&query)
+                    || c.tags.iter().any(|t| t.to_lowercase().contains(&query))
             })
             .collect()
     }
@@ -240,7 +243,8 @@ impl CutsceneLibrary {
 
     /// Sort cutscenes by modification date
     pub fn sort_by_modified(&mut self) {
-        self.cutscenes.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
+        self.cutscenes
+            .sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
     }
 
     /// Export library to JSON
@@ -278,7 +282,10 @@ impl PlaybackState {
 
     /// Check if timeline is active (playing or previewing)
     pub fn is_active(&self) -> bool {
-        matches!(self, PlaybackState::Playing | PlaybackState::Scrubbing | PlaybackState::Previewing)
+        matches!(
+            self,
+            PlaybackState::Playing | PlaybackState::Scrubbing | PlaybackState::Previewing
+        )
     }
 }
 
@@ -331,7 +338,7 @@ mod tests {
         cutscene.add_tag("intro");
         cutscene.add_tag("cinematic");
         assert_eq!(cutscene.tags.len(), 2);
-        
+
         cutscene.remove_tag("intro");
         assert_eq!(cutscene.tags.len(), 1);
     }
@@ -340,10 +347,10 @@ mod tests {
     fn test_cutscene_library() {
         let mut library = CutsceneLibrary::new();
         let id = library.create_new("Test Cutscene");
-        
+
         assert_eq!(library.cutscenes.len(), 1);
         assert_eq!(library.selected_id, Some(id));
-        
+
         let cutscene = library.get(id).unwrap();
         assert_eq!(cutscene.name, "Test Cutscene");
     }
@@ -354,12 +361,12 @@ mod tests {
         let mut cutscene = Cutscene::new("Intro Cinematic");
         cutscene.add_tag("tutorial");
         library.add(cutscene);
-        
+
         library.add(Cutscene::new("Boss Battle"));
-        
+
         let results = library.search("intro");
         assert_eq!(results.len(), 1);
-        
+
         let results = library.search("tutorial");
         assert_eq!(results.len(), 1);
     }
@@ -368,10 +375,10 @@ mod tests {
     fn test_time_format() {
         let format = TimeFormat::Seconds;
         assert_eq!(format.format(5.5), "5.50");
-        
+
         let format = TimeFormat::Frames { fps: 30.0 };
         assert_eq!(format.format(1.0), "30");
-        
+
         let format = TimeFormat::Smpte { fps: 30.0 };
         assert_eq!(format.format(3661.0), "01:01:01:00");
     }

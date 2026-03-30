@@ -69,8 +69,6 @@ pub struct PacingController {
     in_dialogue: bool,
 }
 
-
-
 impl PacingController {
     /// Create a new pacing controller with default settings
     pub fn new() -> Self {
@@ -494,9 +492,9 @@ mod tests {
     fn test_tension_decay() {
         let mut pacing = PacingController::new();
         pacing.set_tension(0.5);
-        
+
         pacing.tick(1.0);
-        
+
         // Tension should have decayed
         assert!(pacing.current_tension() < 0.5);
     }
@@ -519,10 +517,10 @@ mod tests {
     #[test]
     fn test_escalation() {
         let mut pacing = PacingController::new();
-        
+
         pacing.update_escalation(10.0);
         assert_eq!(pacing.stats().player_power_level, 10.0);
-        
+
         pacing.update_escalation(60.0);
         // Should have changed to more intense curve
         assert_eq!(pacing.tension_curve, TensionCurve::Sawtooth);
@@ -531,14 +529,14 @@ mod tests {
     #[test]
     fn test_quiet_state() {
         let mut pacing = PacingController::new();
-        
+
         // Initially quiet
         assert!(pacing.is_quiet_state());
-        
+
         // Start combat
         pacing.record_combat_start();
         assert!(!pacing.is_quiet_state());
-        
+
         // End combat
         pacing.record_combat_end();
         assert!(pacing.is_quiet_state());
@@ -547,10 +545,10 @@ mod tests {
     #[test]
     fn test_generation_recording() {
         let mut pacing = PacingController::new();
-        
+
         let initial_time = pacing.time_since_last_generation();
         pacing.record_generation();
-        
+
         assert!(pacing.time_since_last_generation() < initial_time);
     }
 }

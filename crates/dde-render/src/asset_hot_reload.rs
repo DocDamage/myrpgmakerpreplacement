@@ -678,6 +678,4 @@ mod tests {
         );
         assert_eq!(ReloadResult::Skipped.to_string(), "Skipped");
     }
-
-    
 }

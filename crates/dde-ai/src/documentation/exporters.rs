@@ -33,10 +33,7 @@ pub fn export_markdown(world_bible: &WorldBible, characters: &[CharacterProfile]
     // Timeline
     output.push_str("## Timeline\n\n");
     for event in &world_bible.timeline {
-        output.push_str(&format!(
-            "- **{}**: {}\n",
-            event.year, event.description
-        ));
+        output.push_str(&format!("- **{}**: {}\n", event.year, event.description));
     }
     output.push('\n');
 
@@ -48,7 +45,10 @@ pub fn export_markdown(world_bible: &WorldBible, characters: &[CharacterProfile]
     // Factions
     output.push_str("## Factions\n\n");
     for faction in &world_bible.factions {
-        output.push_str(&format!("### {}\n{}\n\n", faction.name, faction.description));
+        output.push_str(&format!(
+            "### {}\n{}\n\n",
+            faction.name, faction.description
+        ));
     }
 
     // Characters
@@ -241,8 +241,8 @@ fn markdown_to_html(markdown: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::generator::{FactionProfile, GeographySection, HistoricalEvent, LoreSection};
+    use super::*;
     use chrono::Utc;
 
     fn create_test_world_bible() -> WorldBible {
@@ -253,12 +253,10 @@ mod tests {
                 history: vec!["Event 1".to_string(), "Event 2".to_string()],
                 culture: "Rich and diverse".to_string(),
             },
-            timeline: vec![
-                HistoricalEvent {
-                    year: "Year 1".to_string(),
-                    description: "The beginning".to_string(),
-                },
-            ],
+            timeline: vec![HistoricalEvent {
+                year: "Year 1".to_string(),
+                description: "The beginning".to_string(),
+            }],
             geography: GeographySection {
                 description: "A vast world".to_string(),
                 regions: vec![],

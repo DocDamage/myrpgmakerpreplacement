@@ -4,10 +4,10 @@
 //! Generates World Bibles, Character Profiles, Quest Logs, and Store Descriptions.
 
 use dde_ai::documentation::{
+    exporters::{export_markdown, export_pdf, export_wiki},
     generator::{
         CharacterProfile, DocGenerator, QuestLog, StoreDescription, WorldBible, WorldDataProvider,
     },
-    exporters::{export_markdown, export_pdf, export_wiki},
 };
 
 /// Export format options
@@ -176,7 +176,10 @@ impl DocumentationPanel {
                     "📝 Generate World Bible"
                 };
 
-                if ui.button(egui::RichText::new(button_text).size(18.0)).clicked() {
+                if ui
+                    .button(egui::RichText::new(button_text).size(18.0))
+                    .clicked()
+                {
                     // Note: In actual implementation, this would trigger async generation
                     // For now, we simulate the progress
                     self.start_generation();
@@ -207,10 +210,7 @@ impl DocumentationPanel {
                     for character in &docs.characters {
                         ui.collapsing(&character.name, |ui| {
                             ui.label(format!("Description: {}", character.physical_description));
-                            ui.label(format!(
-                                "Personality: {}",
-                                character.personality.join(", ")
-                            ));
+                            ui.label(format!("Personality: {}", character.personality.join(", ")));
                         });
                     }
                 });
@@ -259,7 +259,11 @@ impl DocumentationPanel {
         ui.add_space(10.0);
 
         ui.horizontal(|ui| {
-            ui.selectable_value(&mut self.export_format, ExportFormat::Markdown, "📝 Markdown");
+            ui.selectable_value(
+                &mut self.export_format,
+                ExportFormat::Markdown,
+                "📝 Markdown",
+            );
             ui.selectable_value(&mut self.export_format, ExportFormat::Pdf, "📄 PDF");
             ui.selectable_value(&mut self.export_format, ExportFormat::Wiki, "🌐 Wiki");
         });

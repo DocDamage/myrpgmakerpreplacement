@@ -105,7 +105,7 @@ pub enum SyncMessage {
     SyncState {
         state: ProjectState,
     },
-    
+
     // Heartbeat
     Ping {
         timestamp: u64,
@@ -113,7 +113,7 @@ pub enum SyncMessage {
     Pong {
         timestamp: u64,
     },
-    
+
     // Error
     Error {
         code: ErrorCode,
@@ -124,7 +124,10 @@ pub enum SyncMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Operation {
     Insert,
-    Update { field: String, value: serde_json::Value },
+    Update {
+        field: String,
+        value: serde_json::Value,
+    },
     Delete,
 }
 
@@ -145,7 +148,12 @@ pub struct Rect {
 
 impl Rect {
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     pub fn contains(&self, point: (f32, f32)) -> bool {

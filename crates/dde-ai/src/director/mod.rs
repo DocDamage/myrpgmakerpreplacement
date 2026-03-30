@@ -16,8 +16,13 @@ pub mod generator;
 pub mod pacing;
 pub mod quest_pool;
 
-pub use analyzer::{GameContext, NpcInfo, QuestStatus, WorldAnalyzer, WorldEvent, WorldStateSnapshot};
-pub use generator::{Difficulty, QuestGenerator, QuestProposal, QuestType, Reward, RewardType, TemplateQuestGenerator};
+pub use analyzer::{
+    GameContext, NpcInfo, QuestStatus, WorldAnalyzer, WorldEvent, WorldStateSnapshot,
+};
+pub use generator::{
+    Difficulty, QuestGenerator, QuestProposal, QuestType, Reward, RewardType,
+    TemplateQuestGenerator,
+};
 pub use pacing::{ContentType, PacingController, TensionCurve};
 pub use quest_pool::{ActiveQuest, ProposalId, QuestHistory, QuestOutcome, QuestPool, QuestStage};
 
@@ -175,12 +180,19 @@ impl DirectorSystem {
     }
 
     /// Complete a quest
-    pub fn complete_quest(&mut self, quest_id: crate::director::quest_pool::QuestId) -> Option<QuestHistory> {
+    pub fn complete_quest(
+        &mut self,
+        quest_id: crate::director::quest_pool::QuestId,
+    ) -> Option<QuestHistory> {
         self.quest_pool.complete_quest(quest_id)
     }
 
     /// Fail a quest
-    pub fn fail_quest(&mut self, quest_id: crate::director::quest_pool::QuestId, reason: String) -> Option<QuestHistory> {
+    pub fn fail_quest(
+        &mut self,
+        quest_id: crate::director::quest_pool::QuestId,
+        reason: String,
+    ) -> Option<QuestHistory> {
         self.quest_pool.fail_quest(quest_id, reason)
     }
 

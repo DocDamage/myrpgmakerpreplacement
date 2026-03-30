@@ -35,7 +35,9 @@ impl ConflictStrategy {
     /// Get description of the strategy
     pub fn description(&self) -> &'static str {
         match self {
-            ConflictStrategy::DatabaseWins => "Always use the database version when conflicts occur",
+            ConflictStrategy::DatabaseWins => {
+                "Always use the database version when conflicts occur"
+            }
             ConflictStrategy::EcsWins => "Always use the ECS version when conflicts occur",
             ConflictStrategy::LastWriteWins => "Use whichever version was modified most recently",
             ConflictStrategy::Merge => "Attempt to merge changes from both versions",
@@ -351,8 +353,7 @@ fn merge_json_values(db: serde_json::Value, ecs: serde_json::Value) -> Option<se
                 match db_map.get(&key) {
                     Some(db_value) if db_value.is_object() && ecs_value.is_object() => {
                         // Recursively merge nested objects
-                        if let Some(merged) =
-                            merge_json_values(db_value.clone(), ecs_value.clone())
+                        if let Some(merged) = merge_json_values(db_value.clone(), ecs_value.clone())
                         {
                             db_map.insert(key, merged);
                         }
@@ -467,14 +468,21 @@ mod tests {
             .is_some());
 
         // Both missing = no conflict
-        assert!(resolver.detect_conflict(1, "Position", None, None).is_none());
+        assert!(resolver
+            .detect_conflict(1, "Position", None, None)
+            .is_none());
     }
 
     #[test]
     fn test_conflict_resolution_strategies() {
         // Database wins
         let mut resolver = ConflictResolver::new(ConflictStrategy::DatabaseWins);
-        let conflict = Conflict::new(1, "Position", Some("db".to_string()), Some("ecs".to_string()));
+        let conflict = Conflict::new(
+            1,
+            "Position",
+            Some("db".to_string()),
+            Some("ecs".to_string()),
+        );
         assert_eq!(resolver.resolve(&conflict), ConflictResolution::UseDatabase);
 
         // ECS wins
@@ -485,14 +493,18 @@ mod tests {
     #[test]
     fn test_manual_resolution() {
         let mut resolver = ConflictResolver::new(ConflictStrategy::Manual);
-        let conflict = Conflict::new(1, "Position", Some("db".to_string()), Some("ecs".to_string()));
+        let conflict = Conflict::new(
+            1,
+            "Position",
+            Some("db".to_string()),
+            Some("ecs".to_string()),
+        );
 
         assert_eq!(resolver.resolve(&conflict), ConflictResolution::NeedsManual);
         assert_eq!(resolver.pending_count(), 1);
 
         // Resolve manually
-        let resolved =
-            resolver.resolve_manual(1, "Position", ConflictResolution::UseDatabase);
+        let resolved = resolver.resolve_manual(1, "Position", ConflictResolution::UseDatabase);
         assert!(resolved);
         assert_eq!(resolver.pending_count(), 0);
         assert_eq!(resolver.resolved_count(), 1);
@@ -529,10 +541,14 @@ mod tests {
         assert!(conflict.summary().contains("modified in both"));
 
         let conflict2 = Conflict::new(1, "Position", Some("db".to_string()), None);
-        assert!(conflict2.summary().contains("exists in DB but deleted in ECS"));
+        assert!(conflict2
+            .summary()
+            .contains("exists in DB but deleted in ECS"));
 
         let conflict3 = Conflict::new(1, "Position", None, Some("ecs".to_string()));
-        assert!(conflict3.summary().contains("deleted in DB but exists in ECS"));
+        assert!(conflict3
+            .summary()
+            .contains("deleted in DB but exists in ECS"));
     }
 
     #[test]
@@ -541,10 +557,7 @@ mod tests {
         resolver.set_component_strategy("Position", ConflictStrategy::EcsWins);
         resolver.set_component_strategy("Stats", ConflictStrategy::DatabaseWins);
 
-        assert_eq!(
-            resolver.get_strategy("Position"),
-            ConflictStrategy::EcsWins
-        );
+        assert_eq!(resolver.get_strategy("Position"), ConflictStrategy::EcsWins);
         assert_eq!(
             resolver.get_strategy("Stats"),
             ConflictStrategy::DatabaseWins
@@ -566,7 +579,9 @@ mod tests {
         ));
         assert!(result.is_complete());
 
-        result.needs_manual.push(Conflict::new(2, "Stats", None, None));
+        result
+            .needs_manual
+            .push(Conflict::new(2, "Stats", None, None));
         assert!(!result.is_complete());
 
         assert_eq!(result.total(), 2);

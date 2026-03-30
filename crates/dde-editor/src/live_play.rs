@@ -341,10 +341,7 @@ impl EditorController {
 
     /// Build entity selection info
     fn build_entity_selection(&self, entity: Entity, world: &World) -> Option<EntitySelection> {
-        let name = world
-            .get::<&Name>(entity)
-            .ok()
-            .map(|n| n.display.clone());
+        let name = world.get::<&Name>(entity).ok().map(|n| n.display.clone());
         let kind = world
             .get::<&EntityKindComp>(entity)
             .ok()

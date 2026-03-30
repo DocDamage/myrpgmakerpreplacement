@@ -4,8 +4,8 @@
 
 pub mod battle_panel;
 pub mod behavior_tree;
-pub mod commands;
 pub mod collaboration_panel;
+pub mod commands;
 pub mod cutscene_editor;
 pub mod director_panel;
 pub mod documentation_panel;
@@ -22,7 +22,7 @@ pub mod visual_script;
 pub mod visual_script_editor;
 
 pub use battle_panel::BattlePanel;
-pub use collaboration_panel::{CollaborationPanel, CollaborationExt};
+pub use collaboration_panel::{CollaborationExt, CollaborationPanel};
 pub use cutscene_editor::CutsceneEditor;
 pub use director_panel::DirectorPanel;
 pub use documentation_panel::{DocumentationPanel, ExportFormat, GeneratedDocs};
@@ -115,7 +115,11 @@ impl Editor {
     }
 
     /// Draw the director panel with the director system
-    pub fn draw_director_panel(&mut self, ctx: &egui::Context, director: Option<&mut dde_ai::DirectorSystem>) {
+    pub fn draw_director_panel(
+        &mut self,
+        ctx: &egui::Context,
+        director: Option<&mut dde_ai::DirectorSystem>,
+    ) {
         self.director_panel.draw(ctx, director);
     }
 

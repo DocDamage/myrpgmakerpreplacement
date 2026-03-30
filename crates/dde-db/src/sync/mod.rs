@@ -184,7 +184,8 @@ impl EcsSyncLayer {
     pub fn mark_modified(&mut self, ecs_entity_id: u64) {
         self.modified_entities.insert(ecs_entity_id);
         if let Some(db_id) = self.entity_mapper.to_db(ecs_entity_id) {
-            self.change_tracker.track_entity_change(db_id, ChangeKind::Modified);
+            self.change_tracker
+                .track_entity_change(db_id, ChangeKind::Modified);
         }
     }
 
@@ -196,7 +197,8 @@ impl EcsSyncLayer {
         change: ChangeKind,
     ) {
         if let Some(db_id) = self.entity_mapper.to_db(ecs_entity_id) {
-            self.change_tracker.track_component_change(db_id, component_type, change);
+            self.change_tracker
+                .track_component_change(db_id, component_type, change);
         }
         self.modified_entities.insert(ecs_entity_id);
     }
@@ -245,7 +247,7 @@ impl EcsSyncLayer {
         self.stats.last_sync_duration = duration;
         self.stats.last_sync_time = Some(Instant::now());
         self.last_auto_sync = Instant::now();
-        
+
         // Clear modified entities on successful sync
         if self.config.delta_sync {
             self.modified_entities.clear();
@@ -270,30 +272,35 @@ impl Default for EcsSyncLayer {
 }
 
 /// Trait for ECS world adapters
-/// 
+///
 /// Implement this trait to connect your ECS implementation to the sync layer.
 pub trait EcsWorldAdapter {
     /// Get all entity IDs in the world
     fn get_all_entities(&self) -> Vec<u64>;
-    
+
     /// Get component data for an entity as JSON
     fn get_component_json(&self, entity_id: u64, component_type: &str) -> Option<String>;
-    
+
     /// Set component data for an entity from JSON
-    fn set_component_json(&mut self, entity_id: u64, component_type: &str, json: &str) -> Result<()>;
-    
+    fn set_component_json(
+        &mut self,
+        entity_id: u64,
+        component_type: &str,
+        json: &str,
+    ) -> Result<()>;
+
     /// Check if entity has component
     fn has_component(&self, entity_id: u64, component_type: &str) -> bool;
-    
+
     /// Get all component types for an entity
     fn get_component_types(&self, entity_id: u64) -> Vec<String>;
-    
+
     /// Create a new entity
     fn create_entity(&mut self) -> u64;
-    
+
     /// Destroy an entity
     fn destroy_entity(&mut self, entity_id: u64) -> Result<()>;
-    
+
     /// Get entity position (for spatial indexing)
     fn get_position(&self, entity_id: u64) -> Option<(i32, i32, i32)>;
 }
@@ -438,7 +445,7 @@ mod tests {
     fn test_sync_layer_config() {
         let mut sync = EcsSyncLayer::new();
         assert!(sync.config().track_changes);
-        
+
         sync.config_mut().track_changes = false;
         assert!(!sync.config().track_changes);
     }
@@ -446,13 +453,13 @@ mod tests {
     #[test]
     fn test_entity_mapping() {
         let mut sync = EcsSyncLayer::new();
-        
+
         sync.register_entity(100, 1);
         sync.register_entity(200, 2);
-        
+
         assert_eq!(sync.entity_mapper.to_db(100), Some(1));
         assert_eq!(sync.entity_mapper.to_ecs(1), Some(100));
-        
+
         sync.unregister_entity(100);
         assert_eq!(sync.entity_mapper.to_db(100), None);
     }
@@ -461,9 +468,9 @@ mod tests {
     fn test_mark_modified() {
         let mut sync = EcsSyncLayer::new();
         sync.register_entity(100, 1);
-        
+
         sync.mark_modified(100);
-        
+
         let to_sync = sync.entities_to_sync();
         assert!(to_sync.contains(&100));
     }
@@ -472,14 +479,14 @@ mod tests {
     fn test_sync_stats() {
         let mut stats = SyncStats::default();
         assert!(stats.is_healthy());
-        
+
         stats.entities_synced = 100;
         stats.errors = 5;
         assert!(stats.is_healthy()); // 5% error rate is acceptable
-        
+
         stats.errors = 50;
         assert!(!stats.is_healthy()); // 50% error rate is not acceptable
-        
+
         stats.reset();
         assert_eq!(stats.entities_synced, 0);
     }

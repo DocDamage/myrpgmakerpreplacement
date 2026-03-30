@@ -6,12 +6,12 @@
 //! - Metadata tracking
 //! - Cloud save preparation
 
-use super::encryption::{encrypt_save, decrypt_save, verify_password, EncryptionError};
+use super::encryption::{decrypt_save, encrypt_save, verify_password, EncryptionError};
 use crate::serialization::GameSave;
+use chrono;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
-use chrono;
 
 /// Save system errors
 #[derive(Debug, Error)]
@@ -125,7 +125,9 @@ impl SaveManager {
 
     /// Get backup path for slot
     fn backup_path(&self, slot: u32, backup_num: u32) -> PathBuf {
-        self.config.save_dir.join(format!("save{:03}_backup_{}.dat", slot, backup_num))
+        self.config
+            .save_dir
+            .join(format!("save{:03}_backup_{}.dat", slot, backup_num))
     }
 
     /// Refresh save metadata cache
@@ -186,7 +188,8 @@ impl SaveManager {
         }
 
         // Serialize save data
-        let json = save_data.to_json()
+        let json = save_data
+            .to_json()
             .map_err(|e| SaveError::Serialization(e.to_string()))?;
 
         // Encrypt or save as plain text
@@ -200,16 +203,19 @@ impl SaveManager {
         std::fs::write(self.save_path(slot), &data)?;
 
         // Update cache
-        self.cache.insert(slot, SaveMetadata {
+        self.cache.insert(
             slot,
-            player_name: save_data.player_name.clone(),
-            current_map: save_data.current_map.clone(),
-            play_time_secs: save_data.play_time_secs,
-            timestamp: save_data.timestamp,
-            has_screenshot: save_data.screenshot.is_some(),
-            file_size: data.len() as u64,
-            is_encrypted: password.is_some() || self.config.default_password.is_some(),
-        });
+            SaveMetadata {
+                slot,
+                player_name: save_data.player_name.clone(),
+                current_map: save_data.current_map.clone(),
+                play_time_secs: save_data.play_time_secs,
+                timestamp: save_data.timestamp,
+                has_screenshot: save_data.screenshot.is_some(),
+                file_size: data.len() as u64,
+                is_encrypted: password.is_some() || self.config.default_password.is_some(),
+            },
+        );
 
         Ok(())
     }
@@ -235,14 +241,15 @@ impl SaveManager {
             }
         } else {
             // Try to decrypt
-            let pass = password.or(self.config.default_password.as_deref())
+            let pass = password
+                .or(self.config.default_password.as_deref())
                 .ok_or(SaveError::PasswordRequired)?;
             decrypt_save(&data, pass)?
         };
 
         // Parse GameSave
-        let save = GameSave::from_json(&json)
-            .map_err(|e| SaveError::Serialization(e.to_string()))?;
+        let save =
+            GameSave::from_json(&json).map_err(|e| SaveError::Serialization(e.to_string()))?;
 
         Ok(save)
     }
@@ -361,9 +368,15 @@ impl SaveManager {
     }
 
     /// Export save to portable format
-    pub fn export(&self, slot: u32, destination: &Path, password: Option<&str>) -> Result<(), SaveError> {
+    pub fn export(
+        &self,
+        slot: u32,
+        destination: &Path,
+        password: Option<&str>,
+    ) -> Result<(), SaveError> {
         let save = self.load(slot, password)?;
-        let json = save.to_json()
+        let json = save
+            .to_json()
             .map_err(|e| SaveError::Serialization(e.to_string()))?;
 
         std::fs::write(destination, json)?;
@@ -371,10 +384,15 @@ impl SaveManager {
     }
 
     /// Import save from portable format
-    pub fn import(&mut self, slot: u32, source: &Path, password: Option<&str>) -> Result<(), SaveError> {
+    pub fn import(
+        &mut self,
+        slot: u32,
+        source: &Path,
+        password: Option<&str>,
+    ) -> Result<(), SaveError> {
         let json = std::fs::read_to_string(source)?;
-        let save = GameSave::from_json(&json)
-            .map_err(|e| SaveError::Serialization(e.to_string()))?;
+        let save =
+            GameSave::from_json(&json).map_err(|e| SaveError::Serialization(e.to_string()))?;
 
         self.save(slot, &save, password)
     }
@@ -404,7 +422,6 @@ impl SaveManager {
 mod tests {
     use super::*;
 
-
     fn create_test_save(slot: u32) -> GameSave {
         GameSave::new(slot, "Test Player", "test_map")
     }
@@ -412,9 +429,10 @@ mod tests {
     fn create_temp_manager() -> SaveManager {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);
-        
+
         let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let temp_dir = std::env::temp_dir().join(format!("dde_test_{}_{}", std::process::id(), counter));
+        let temp_dir =
+            std::env::temp_dir().join(format!("dde_test_{}_{}", std::process::id(), counter));
         let _ = std::fs::remove_dir_all(&temp_dir);
 
         SaveManager::new(SaveConfig {
@@ -423,7 +441,8 @@ mod tests {
             default_password: None,
             auto_backup: true,
             max_backups: 3,
-        }).unwrap()
+        })
+        .unwrap()
     }
 
     #[test]

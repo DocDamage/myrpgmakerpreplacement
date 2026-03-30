@@ -514,11 +514,7 @@ impl AdvancedProfiler {
             return Duration::ZERO;
         }
 
-        let mut times: Vec<Duration> = self
-            .frame_history
-            .iter()
-            .map(|f| f.total_time)
-            .collect();
+        let mut times: Vec<Duration> = self.frame_history.iter().map(|f| f.total_time).collect();
         times.sort();
 
         let index = ((times.len() as f64 * percentile / 100.0) as usize).min(times.len() - 1);
@@ -536,7 +532,11 @@ impl AdvancedProfiler {
         systems
     }
 
-    fn collect_node_metrics(&self, node: &ProfileNode, systems: &mut HashMap<String, SystemMetrics>) {
+    fn collect_node_metrics(
+        &self,
+        node: &ProfileNode,
+        systems: &mut HashMap<String, SystemMetrics>,
+    ) {
         systems.insert(
             node.name.clone(),
             SystemMetrics {

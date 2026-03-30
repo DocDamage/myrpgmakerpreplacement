@@ -45,6 +45,8 @@ struct PendingChange {
     path: PathBuf,
     asset_type: String,
     change_type: ChangeType,
+    /// Timestamp for potential future use (e.g., showing change age)
+    #[allow(dead_code)]
     timestamp: Instant,
 }
 
@@ -447,7 +449,7 @@ impl HotReloadPanel {
         // Collect changes to process separately to avoid borrow issues
         let mut to_reload: Vec<PathBuf> = Vec::new();
         let mut to_ignore: Vec<PathBuf> = Vec::new();
-        
+
         egui::ScrollArea::vertical().show(ui, |ui| {
             for change in &self.pending_changes {
                 let (reload, ignore) = self.draw_pending_change_card(ui, change);
@@ -459,7 +461,7 @@ impl HotReloadPanel {
                 }
             }
         });
-        
+
         // Process actions outside the loop
         for path in &to_reload {
             match interface.force_reload(path) {
@@ -472,7 +474,7 @@ impl HotReloadPanel {
                 }
             }
         }
-        
+
         for path in &to_ignore {
             self.pending_changes.retain(|c| &c.path != path);
             self.show_status(&format!("Ignored: {}", path.display()), false);
@@ -480,11 +482,7 @@ impl HotReloadPanel {
     }
 
     /// Draw a pending change card, returns (should_reload, should_ignore)
-    fn draw_pending_change_card(
-        &self,
-        ui: &mut egui::Ui,
-        change: &PendingChange,
-    ) -> (bool, bool) {
+    fn draw_pending_change_card(&self, ui: &mut egui::Ui, change: &PendingChange) -> (bool, bool) {
         let is_selected = self.selected_asset.as_ref() == Some(&change.path);
         let mut should_reload = false;
         let mut should_ignore = false;
@@ -505,8 +503,14 @@ impl HotReloadPanel {
                     // Asset info
                     ui.vertical(|ui| {
                         ui.label(
-                            egui::RichText::new(change.path.file_name().unwrap_or_default().to_string_lossy())
-                                .strong(),
+                            egui::RichText::new(
+                                change
+                                    .path
+                                    .file_name()
+                                    .unwrap_or_default()
+                                    .to_string_lossy(),
+                            )
+                            .strong(),
                         );
                         ui.horizontal(|ui| {
                             ui.label(format!("Type: {}", change.asset_type));
@@ -528,7 +532,7 @@ impl HotReloadPanel {
             });
 
         ui.add_space(4.0);
-        
+
         (should_reload, should_ignore)
     }
 
@@ -581,8 +585,10 @@ impl HotReloadPanel {
                     // Asset info
                     ui.vertical(|ui| {
                         ui.label(
-                            egui::RichText::new(entry.path.file_name().unwrap_or_default().to_string_lossy())
-                                .strong(),
+                            egui::RichText::new(
+                                entry.path.file_name().unwrap_or_default().to_string_lossy(),
+                            )
+                            .strong(),
                         );
                         ui.horizontal(|ui| {
                             ui.label(format!("Type: {}", entry.asset_type));
@@ -616,7 +622,10 @@ impl HotReloadPanel {
 
         // Auto-reload toggle
         let mut auto_reload = interface.auto_reload();
-        if ui.checkbox(&mut auto_reload, "Auto-reload on change").changed() {
+        if ui
+            .checkbox(&mut auto_reload, "Auto-reload on change")
+            .changed()
+        {
             interface.set_auto_reload(auto_reload);
             self.show_status(
                 if auto_reload {
@@ -635,7 +644,11 @@ impl HotReloadPanel {
         let mut debounce_ms = interface.debounce_ms();
         ui.horizontal(|ui| {
             ui.label("Debounce duration:");
-            ui.add(egui::DragValue::new(&mut debounce_ms).speed(10.0).suffix(" ms"));
+            ui.add(
+                egui::DragValue::new(&mut debounce_ms)
+                    .speed(10.0)
+                    .suffix(" ms"),
+            );
         });
         ui.label("Wait this long after a change before reloading (prevents partial writes).");
         if debounce_ms != interface.debounce_ms() {
@@ -652,14 +665,16 @@ impl HotReloadPanel {
         if watched.is_empty() {
             ui.label("No directories being watched.");
         } else {
-            egui::ScrollArea::vertical().max_height(150.0).show(ui, |ui| {
-                for (path, asset_type) in watched {
-                    ui.horizontal(|ui| {
-                        ui.label("📁");
-                        ui.label(format!("{} ({})", path.display(), asset_type));
-                    });
-                }
-            });
+            egui::ScrollArea::vertical()
+                .max_height(150.0)
+                .show(ui, |ui| {
+                    for (path, asset_type) in watched {
+                        ui.horizontal(|ui| {
+                            ui.label("📁");
+                            ui.label(format!("{} ({})", path.display(), asset_type));
+                        });
+                    }
+                });
         }
     }
 

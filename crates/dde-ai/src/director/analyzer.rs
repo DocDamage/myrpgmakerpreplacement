@@ -95,7 +95,7 @@ impl WorldAnalyzer {
     pub fn record_event(&mut self, event: WorldEvent) {
         // Update tension based on event first
         self.update_tension_for_event(&event);
-        
+
         if self.recent_events.len() >= self.max_events {
             self.recent_events.pop_front();
         }
@@ -372,9 +372,15 @@ pub enum WorldEvent {
     /// Quest failed
     QuestFailed { quest_id: u64, reason: String },
     /// NPC died
-    NpcDeath { npc_name: String, killer: Option<String> },
+    NpcDeath {
+        npc_name: String,
+        killer: Option<String>,
+    },
     /// New location discovered
-    Discovery { location_type: String, location_name: String },
+    Discovery {
+        location_type: String,
+        location_name: String,
+    },
     /// Faction relationship changed
     FactionShift { faction_id: u32, new_standing: i32 },
     /// Calamity event occurred
@@ -506,7 +512,7 @@ mod tests {
         let mut analyzer = WorldAnalyzer::new();
         analyzer.record_event(WorldEvent::CombatEncounter);
         analyzer.record_event(WorldEvent::CalamityEvent);
-        
+
         // Tension should be increased
         assert!(analyzer.current_tension() > 0.0);
     }
@@ -516,10 +522,10 @@ mod tests {
         let mut analyzer = WorldAnalyzer::new();
         analyzer.record_event(WorldEvent::CombatEncounter);
         let initial_tension = analyzer.current_tension();
-        
+
         // Simulate time passing
         analyzer.tick(1.0);
-        
+
         // Tension should have decayed
         assert!(analyzer.current_tension() < initial_tension);
     }
@@ -532,7 +538,7 @@ mod tests {
             tension_level: 0.3,
             ..Default::default()
         };
-        
+
         assert!(context.is_quiet_state());
     }
 

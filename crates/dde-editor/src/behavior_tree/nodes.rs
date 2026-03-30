@@ -260,9 +260,9 @@ impl BtNodeType {
     /// Get children if this node has them
     pub fn children(&self) -> Option<&Vec<BtNode>> {
         match self {
-            Self::Selector { children } | Self::Sequence { children } | Self::Parallel { children, .. } => {
-                Some(children)
-            }
+            Self::Selector { children }
+            | Self::Sequence { children }
+            | Self::Parallel { children, .. } => Some(children),
             _ => None,
         }
     }
@@ -270,9 +270,9 @@ impl BtNodeType {
     /// Get mutable children if this node has them
     pub fn children_mut(&mut self) -> Option<&mut Vec<BtNode>> {
         match self {
-            Self::Selector { children } | Self::Sequence { children } | Self::Parallel { children, .. } => {
-                Some(children)
-            }
+            Self::Selector { children }
+            | Self::Sequence { children }
+            | Self::Parallel { children, .. } => Some(children),
             _ => None,
         }
     }
@@ -336,8 +336,12 @@ impl NodeCategory {
     pub fn templates(&self) -> Vec<BtNodeType> {
         match self {
             Self::Composite => vec![
-                BtNodeType::Selector { children: Vec::new() },
-                BtNodeType::Sequence { children: Vec::new() },
+                BtNodeType::Selector {
+                    children: Vec::new(),
+                },
+                BtNodeType::Sequence {
+                    children: Vec::new(),
+                },
                 BtNodeType::Parallel {
                     children: Vec::new(),
                     success_policy: ParallelPolicy::RequireAll,
@@ -365,7 +369,9 @@ impl NodeCategory {
             ],
             Self::Condition => vec![
                 BtNodeType::IsPlayerNearby { radius: 10.0 },
-                BtNodeType::HasLineOfSight { target: Target::Player },
+                BtNodeType::HasLineOfSight {
+                    target: Target::Player,
+                },
                 BtNodeType::HealthBelow { percent: 0.25 },
                 BtNodeType::InCombat,
                 BtNodeType::TimeOfDay { min: 6, max: 18 },
@@ -385,7 +391,9 @@ impl NodeCategory {
                     target: Target::Player,
                     distance: 3.0,
                 },
-                BtNodeType::Attack { target: Target::Player },
+                BtNodeType::Attack {
+                    target: Target::Player,
+                },
                 BtNodeType::UseSkill {
                     skill_id: 0,
                     target: Target::Player,
@@ -426,7 +434,11 @@ pub struct MoveTargetPosition {
 
 impl From<Vec3> for MoveTargetPosition {
     fn from(v: Vec3) -> Self {
-        Self { x: v.x, y: v.y, z: v.z }
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
     }
 }
 
@@ -451,7 +463,11 @@ impl<'de> serde::Deserialize<'de> for MoveTargetPosition {
         D: serde::Deserializer<'de>,
     {
         let arr: [f32; 3] = serde::Deserialize::deserialize(deserializer)?;
-        Ok(Self { x: arr[0], y: arr[1], z: arr[2] })
+        Ok(Self {
+            x: arr[0],
+            y: arr[1],
+            z: arr[2],
+        })
     }
 }
 
@@ -583,7 +599,7 @@ impl BtNode {
         if self.id == id {
             return Some(self);
         }
-        
+
         if let Some(children) = self.children() {
             for child in children {
                 if let Some(found) = child.find_node(id) {
@@ -591,13 +607,13 @@ impl BtNode {
                 }
             }
         }
-        
+
         if let Some(child) = self.node_type.child() {
             if let Some(found) = child.find_node(id) {
                 return Some(found);
             }
         }
-        
+
         None
     }
 
@@ -606,7 +622,7 @@ impl BtNode {
         if self.id == id {
             return Some(self);
         }
-        
+
         // Use a raw pointer approach to avoid borrow checker issues
         // First, find which path to take without keeping borrows
         enum ChildLocation {
@@ -614,23 +630,19 @@ impl BtNode {
             Single(*mut BtNode),
             None,
         }
-        
+
         let location = match &mut self.node_type {
-            BtNodeType::Selector { children } 
-            | BtNodeType::Sequence { children } 
-            | BtNodeType::Parallel { children, .. } => {
-                ChildLocation::Multiple(children as *mut _)
-            }
+            BtNodeType::Selector { children }
+            | BtNodeType::Sequence { children }
+            | BtNodeType::Parallel { children, .. } => ChildLocation::Multiple(children as *mut _),
             BtNodeType::Inverter { child }
             | BtNodeType::Repeater { child, .. }
             | BtNodeType::UntilSuccess { child }
             | BtNodeType::UntilFailure { child }
-            | BtNodeType::Cooldown { child, .. } => {
-                ChildLocation::Single(child.as_mut() as *mut _)
-            }
+            | BtNodeType::Cooldown { child, .. } => ChildLocation::Single(child.as_mut() as *mut _),
             _ => ChildLocation::None,
         };
-        
+
         // Now search without any active borrows of self.node_type
         match location {
             ChildLocation::Multiple(children_ptr) => {
@@ -649,20 +661,20 @@ impl BtNode {
             }
             ChildLocation::None => {}
         }
-        
+
         None
     }
 
     /// Get all node IDs in this subtree
     pub fn collect_ids(&self, ids: &mut Vec<NodeId>) {
         ids.push(self.id);
-        
+
         if let Some(children) = self.children() {
             for child in children {
                 child.collect_ids(ids);
             }
         }
-        
+
         if let Some(child) = self.node_type.child() {
             child.collect_ids(ids);
         }
@@ -675,7 +687,7 @@ impl BtNode {
                 children.remove(pos);
                 return true;
             }
-            
+
             // Try recursively
             for child in children.iter_mut() {
                 if child.remove_child(child_id) {
@@ -683,7 +695,7 @@ impl BtNode {
                 }
             }
         }
-        
+
         false
     }
 
@@ -716,10 +728,10 @@ impl BtNode {
 pub enum BtNodeError {
     #[error("Node cannot have children")]
     CannotHaveChildren,
-    
+
     #[error("Node not found: {0:?}")]
     NodeNotFound(NodeId),
-    
+
     #[error("Invalid node connection")]
     InvalidConnection,
 }
@@ -730,17 +742,19 @@ mod tests {
 
     #[test]
     fn test_node_categories() {
-        let selector = BtNodeType::Selector { children: Vec::new() };
+        let selector = BtNodeType::Selector {
+            children: Vec::new(),
+        };
         assert_eq!(selector.category(), NodeCategory::Composite);
-        
+
         let inverter = BtNodeType::Inverter {
             child: Box::new(BtNode::default()),
         };
         assert_eq!(inverter.category(), NodeCategory::Decorator);
-        
+
         let condition = BtNodeType::InCombat;
         assert_eq!(condition.category(), NodeCategory::Condition);
-        
+
         let action = BtNodeType::Flee;
         assert_eq!(action.category(), NodeCategory::Action);
     }
@@ -755,18 +769,20 @@ mod tests {
     #[test]
     fn test_node_find() {
         let mut root = BtNode::new(
-            BtNodeType::Sequence { children: Vec::new() },
+            BtNodeType::Sequence {
+                children: Vec::new(),
+            },
             [0.0, 0.0],
         );
-        
+
         let child1 = BtNode::new(BtNodeType::InCombat, [100.0, 0.0]);
         let child1_id = child1.id;
         let child2 = BtNode::new(BtNodeType::Flee, [200.0, 0.0]);
         let child2_id = child2.id;
-        
+
         root.add_child(child1).unwrap();
         root.add_child(child2).unwrap();
-        
+
         assert!(root.find_node(child1_id).is_some());
         assert!(root.find_node(child2_id).is_some());
         assert!(root.find_node(NodeId::new()).is_none());
@@ -775,13 +791,17 @@ mod tests {
     #[test]
     fn test_collect_ids() {
         let mut root = BtNode::new(
-            BtNodeType::Sequence { children: Vec::new() },
+            BtNodeType::Sequence {
+                children: Vec::new(),
+            },
             [0.0, 0.0],
         );
-        
-        root.add_child(BtNode::new(BtNodeType::InCombat, [100.0, 0.0])).unwrap();
-        root.add_child(BtNode::new(BtNodeType::Flee, [200.0, 0.0])).unwrap();
-        
+
+        root.add_child(BtNode::new(BtNodeType::InCombat, [100.0, 0.0]))
+            .unwrap();
+        root.add_child(BtNode::new(BtNodeType::Flee, [200.0, 0.0]))
+            .unwrap();
+
         let mut ids = Vec::new();
         root.collect_ids(&mut ids);
         assert_eq!(ids.len(), 3);

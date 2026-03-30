@@ -6,7 +6,7 @@
 //! - Export/Import
 //! - Backup management
 
-use dde_core::save::{SaveConfig, SaveManager, SaveMetadata, SaveError};
+use dde_core::save::{SaveConfig, SaveError, SaveManager, SaveMetadata};
 use dde_core::GameSave;
 use egui::{Color32, RichText, Ui};
 use std::path::PathBuf;
@@ -53,7 +53,8 @@ impl Default for SavePanel {
             SaveManager::new(SaveConfig {
                 save_dir: std::env::temp_dir().join("dde_saves"),
                 ..Default::default()
-            }).unwrap()
+            })
+            .unwrap()
         });
 
         Self {
@@ -127,7 +128,10 @@ impl SavePanel {
                 self.current_tab = SavePanelTab::Settings;
             }
             if ui
-                .selectable_label(self.current_tab == SavePanelTab::ImportExport, "📁 Import/Export")
+                .selectable_label(
+                    self.current_tab == SavePanelTab::ImportExport,
+                    "📁 Import/Export",
+                )
                 .clicked()
             {
                 self.current_tab = SavePanelTab::ImportExport;
@@ -138,7 +142,11 @@ impl SavePanel {
 
         // Status message
         if let Some((msg, is_error)) = &self.status_message {
-            let color = if *is_error { Color32::RED } else { Color32::GREEN };
+            let color = if *is_error {
+                Color32::RED
+            } else {
+                Color32::GREEN
+            };
             ui.label(RichText::new(msg).color(color));
             if ui.button("Clear").clicked() {
                 self.clear_status();
@@ -186,11 +194,7 @@ impl SavePanel {
 
             if ui.button("💾 Create Save").clicked() {
                 if let Some(slot) = self.save_manager.next_available_slot() {
-                    let save = GameSave::new(
-                        slot,
-                        &self.new_player_name,
-                        &self.new_map_name,
-                    );
+                    let save = GameSave::new(slot, &self.new_player_name, &self.new_map_name);
                     let password = if self.password_input.is_empty() {
                         None
                     } else {
@@ -215,14 +219,19 @@ impl SavePanel {
         ui.add_space(10.0);
 
         // Save slots grid
-        let metadata: Vec<_> = self.save_manager.get_all_metadata().into_iter().cloned().collect();
+        let metadata: Vec<_> = self
+            .save_manager
+            .get_all_metadata()
+            .into_iter()
+            .cloned()
+            .collect();
 
         if metadata.is_empty() {
             ui.label("No save files found.");
         } else {
             // Collect data needed before the closure
             let selected_slot = self.selected_slot;
-            
+
             egui::Grid::new("save_slots_grid")
                 .num_columns(4)
                 .spacing([20.0, 10.0])
@@ -235,11 +244,11 @@ impl SavePanel {
 
                     for meta in &metadata {
                         Self::draw_save_slot_row(
-                            ui, 
-                            meta, 
-                            selected_slot, 
+                            ui,
+                            meta,
+                            selected_slot,
                             &mut self.selected_slot,
-                            &mut self.confirm_delete
+                            &mut self.confirm_delete,
                         );
                         ui.end_row();
                     }
@@ -249,8 +258,8 @@ impl SavePanel {
 
     /// Draw a single save slot row
     fn draw_save_slot_row(
-        ui: &mut Ui, 
-        meta: &SaveMetadata, 
+        ui: &mut Ui,
+        meta: &SaveMetadata,
         selected_slot: Option<u32>,
         selected_slot_ref: &mut Option<u32>,
         confirm_delete: &mut Option<u32>,
@@ -341,9 +350,15 @@ impl SavePanel {
             } else {
                 ui.label(format!("Slot {} has {} backup(s)", slot, backups.len()));
                 for backup_num in backups {
-                    if ui.button(format!("Restore backup {} for slot {}", backup_num, slot)).clicked() {
+                    if ui
+                        .button(format!("Restore backup {} for slot {}", backup_num, slot))
+                        .clicked()
+                    {
                         match self.save_manager.restore_backup(slot, backup_num) {
-                            Ok(()) => self.set_status(format!("Restored backup {} for slot {}", backup_num, slot), false),
+                            Ok(()) => self.set_status(
+                                format!("Restored backup {} for slot {}", backup_num, slot),
+                                false,
+                            ),
                             Err(e) => self.set_status(format!("Restore failed: {}", e), true),
                         }
                     }
@@ -391,7 +406,8 @@ impl SavePanel {
                         };
 
                         match self.save_manager.export(slot, &path, password) {
-                            Ok(()) => self.set_status(format!("Exported slot {} to {:?}", slot, path), false),
+                            Ok(()) => self
+                                .set_status(format!("Exported slot {} to {:?}", slot, path), false),
                             Err(e) => self.set_status(format!("Export failed: {}", e), true),
                         }
                     }
@@ -464,7 +480,10 @@ impl SavePanel {
             .collapsible(false)
             .resizable(false)
             .show(ui.ctx(), |ui| {
-                ui.label(format!("Are you sure you want to delete save slot {}?", slot));
+                ui.label(format!(
+                    "Are you sure you want to delete save slot {}?",
+                    slot
+                ));
                 ui.label("This action cannot be undone!");
 
                 ui.horizontal(|ui| {
@@ -472,7 +491,10 @@ impl SavePanel {
                         self.confirm_delete = None;
                     }
 
-                    if ui.button(RichText::new("Delete").color(Color32::RED)).clicked() {
+                    if ui
+                        .button(RichText::new("Delete").color(Color32::RED))
+                        .clicked()
+                    {
                         match self.save_manager.delete(slot) {
                             Ok(()) => {
                                 self.set_status(format!("Deleted slot {}", slot), false);
@@ -519,7 +541,7 @@ mod tests {
     #[test]
     fn test_save_panel_status() {
         let mut panel = SavePanel::default();
-        
+
         panel.set_status("Test message", false);
         assert!(panel.status_message.is_some());
         assert_eq!(panel.status_message.as_ref().unwrap().0, "Test message");

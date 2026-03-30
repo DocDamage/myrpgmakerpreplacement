@@ -8,9 +8,7 @@
 //! - Right-click context menu for adding nodes
 //! - Mini-map overview
 
-use super::nodes::{
-    get_node_categories, Node, NodeCategory, NodeId, Pin, PinId, PinType,
-};
+use super::nodes::{get_node_categories, Node, NodeCategory, NodeId, Pin, PinId, PinType};
 use egui::{pos2, vec2, Color32, Pos2, Rect, Response, Stroke, Vec2};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -76,9 +74,10 @@ impl NodeGraph {
         }
 
         // Validate the connection
-        if let (Some(source_node), Some(target_node)) =
-            (self.nodes.get(&connection.source_node), self.nodes.get(&connection.target_node))
-        {
+        if let (Some(source_node), Some(target_node)) = (
+            self.nodes.get(&connection.source_node),
+            self.nodes.get(&connection.target_node),
+        ) {
             if let (Some(source_pin), Some(target_pin)) = (
                 source_node.get_pin(connection.source_pin),
                 target_node.get_pin(connection.target_pin),
@@ -152,7 +151,10 @@ enum CanvasInteraction {
     Panning,
     Selecting,
     DraggingNode,
-    DraggingConnection { source_node: NodeId, source_pin: PinId },
+    DraggingConnection {
+        source_node: NodeId,
+        source_pin: PinId,
+    },
 }
 
 /// Selection state
@@ -335,7 +337,11 @@ impl NodeCanvas {
         self.draw_connections(ui, &rect);
 
         // Draw active connection being dragged
-        if let CanvasInteraction::DraggingConnection { source_node, source_pin } = self.interaction {
+        if let CanvasInteraction::DraggingConnection {
+            source_node,
+            source_pin,
+        } = self.interaction
+        {
             if let (Some(mouse_pos), Some(node)) =
                 (self.last_mouse_pos, self.graph.nodes.get(&source_node))
             {
@@ -392,22 +398,29 @@ impl NodeCanvas {
                 .title_bar(false)
                 .resizable(false)
                 .show(ui.ctx(), |ui| {
-                    egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
-                        for category in &self.node_categories {
-                            ui.collapsing(
-                                egui::RichText::new(category.name).color(category.color),
-                                |ui| {
-                                    for template in &category.node_types {
-                                        if ui.button(template.name).on_hover_text(template.description).clicked() {
-                                            let node = template.create_node([canvas_pos.x, canvas_pos.y]);
-                                            self.graph.add_node(node);
-                                            self.context_menu_pos = None;
+                    egui::ScrollArea::vertical()
+                        .max_height(400.0)
+                        .show(ui, |ui| {
+                            for category in &self.node_categories {
+                                ui.collapsing(
+                                    egui::RichText::new(category.name).color(category.color),
+                                    |ui| {
+                                        for template in &category.node_types {
+                                            if ui
+                                                .button(template.name)
+                                                .on_hover_text(template.description)
+                                                .clicked()
+                                            {
+                                                let node = template
+                                                    .create_node([canvas_pos.x, canvas_pos.y]);
+                                                self.graph.add_node(node);
+                                                self.context_menu_pos = None;
+                                            }
                                         }
-                                    }
-                                },
-                            );
-                        }
-                    });
+                                    },
+                                );
+                            }
+                        });
 
                     ui.separator();
                     if ui.button("Cancel").clicked() {
@@ -511,16 +524,15 @@ impl NodeCanvas {
         // Handle drag end
         if response.drag_stopped() {
             match self.interaction {
-                CanvasInteraction::DraggingConnection { source_node, source_pin } => {
+                CanvasInteraction::DraggingConnection {
+                    source_node,
+                    source_pin,
+                } => {
                     // Try to complete connection
                     if let Some(pos) = self.last_mouse_pos {
                         if let Some((target_node, target_pin)) = self.find_pin_at(pos, rect) {
-                            let connection = Connection::new(
-                                source_node,
-                                source_pin,
-                                target_node,
-                                target_pin,
-                            );
+                            let connection =
+                                Connection::new(source_node, source_pin, target_node, target_pin);
                             self.graph.add_connection(connection);
                         }
                     }
@@ -597,15 +609,12 @@ impl NodeCanvas {
             .collect();
 
         for conn in connections_to_clone {
-            if let (Some(&new_source), Some(&new_target)) =
-                (id_mapping.get(&conn.source_node), id_mapping.get(&conn.target_node))
-            {
-                let new_conn = Connection::new(
-                    new_source,
-                    conn.source_pin,
-                    new_target,
-                    conn.target_pin,
-                );
+            if let (Some(&new_source), Some(&new_target)) = (
+                id_mapping.get(&conn.source_node),
+                id_mapping.get(&conn.target_node),
+            ) {
+                let new_conn =
+                    Connection::new(new_source, conn.source_pin, new_target, conn.target_pin);
                 self.graph.add_connection(new_conn);
             }
         }
@@ -616,7 +625,8 @@ impl NodeCanvas {
 
     /// Draw the background
     fn draw_background(&self, ui: &mut egui::Ui, rect: &Rect) {
-        ui.painter().rect_filled(*rect, 0.0, self.style.background_color);
+        ui.painter()
+            .rect_filled(*rect, 0.0, self.style.background_color);
     }
 
     /// Draw the grid
@@ -649,9 +659,10 @@ impl NodeCanvas {
     /// Draw all connections
     fn draw_connections(&self, ui: &mut egui::Ui, rect: &Rect) {
         for conn in &self.graph.connections {
-            if let (Some(source_node), Some(target_node)) =
-                (self.graph.nodes.get(&conn.source_node), self.graph.nodes.get(&conn.target_node))
-            {
+            if let (Some(source_node), Some(target_node)) = (
+                self.graph.nodes.get(&conn.source_node),
+                self.graph.nodes.get(&conn.target_node),
+            ) {
                 if let (Some(source_pin), Some(target_pin)) = (
                     source_node.get_pin(conn.source_pin),
                     target_node.get_pin(conn.target_pin),
@@ -688,8 +699,10 @@ impl NodeCanvas {
             })
             .collect();
 
-        ui.painter()
-            .add(egui::Shape::line(points, Stroke::new(self.style.connection_thickness * self.zoom, color)));
+        ui.painter().add(egui::Shape::line(
+            points,
+            Stroke::new(self.style.connection_thickness * self.zoom, color),
+        ));
     }
 
     /// Draw a straight connection line
@@ -754,10 +767,8 @@ impl NodeCanvas {
 
         // Header
         let header_height = self.style.node_header_height * self.zoom;
-        let header_rect = Rect::from_min_size(
-            screen_rect.min,
-            vec2(screen_rect.width(), header_height),
-        );
+        let header_rect =
+            Rect::from_min_size(screen_rect.min, vec2(screen_rect.width(), header_height));
         ui.painter().rect_filled(
             header_rect,
             egui::Rounding::same(self.style.node_corner_radius * self.zoom)
@@ -802,15 +813,28 @@ impl NodeCanvas {
     }
 
     /// Draw a single pin
-    fn draw_pin(&mut self, ui: &mut egui::Ui, node_id: NodeId, pin: &Pin, pos: Pos2, radius: f32, is_input: bool) {
+    fn draw_pin(
+        &mut self,
+        ui: &mut egui::Ui,
+        node_id: NodeId,
+        pin: &Pin,
+        pos: Pos2,
+        radius: f32,
+        is_input: bool,
+    ) {
         let color = pin.pin_type.color();
 
         // Pin circle
         ui.painter().circle_filled(pos, radius, color);
-        ui.painter().circle_stroke(pos, radius, Stroke::new(1.0, Color32::WHITE));
+        ui.painter()
+            .circle_stroke(pos, radius, Stroke::new(1.0, Color32::WHITE));
 
         // Pin label
-        let label_offset = if is_input { radius + 5.0 } else { -(radius + 5.0) };
+        let label_offset = if is_input {
+            radius + 5.0
+        } else {
+            -(radius + 5.0)
+        };
         let label_pos = pos2(pos.x + label_offset, pos.y);
         let align = if is_input {
             egui::Align2::LEFT_CENTER
@@ -838,12 +862,17 @@ impl NodeCanvas {
     /// Draw the minimap
     fn draw_minimap(&self, ui: &mut egui::Ui, rect: &Rect) {
         let minimap_size = vec2(150.0, 100.0);
-        let minimap_pos = pos2(rect.max.x - minimap_size.x - 10.0, rect.max.y - minimap_size.y - 10.0);
+        let minimap_pos = pos2(
+            rect.max.x - minimap_size.x - 10.0,
+            rect.max.y - minimap_size.y - 10.0,
+        );
         let minimap_rect = Rect::from_min_size(minimap_pos, minimap_size);
 
         // Background
-        ui.painter().rect_filled(minimap_rect, 4.0, Color32::from_gray(30));
-        ui.painter().rect_stroke(minimap_rect, 4.0, Stroke::new(1.0, Color32::from_gray(60)));
+        ui.painter()
+            .rect_filled(minimap_rect, 4.0, Color32::from_gray(30));
+        ui.painter()
+            .rect_stroke(minimap_rect, 4.0, Stroke::new(1.0, Color32::from_gray(60)));
 
         // Calculate bounds
         if self.graph.nodes.is_empty() {
@@ -873,11 +902,9 @@ impl NodeCanvas {
         for node in self.graph.nodes.values() {
             let x = minimap_pos.x + 5.0 + (node.position[0] - min_x) * scale;
             let y = minimap_pos.y + 5.0 + (node.position[1] - min_y) * scale;
-            let node_rect = Rect::from_center_size(
-                pos2(x, y),
-                vec2(8.0, 6.0),
-            );
-            ui.painter().rect_filled(node_rect, 1.0, node.category_color());
+            let node_rect = Rect::from_center_size(pos2(x, y), vec2(8.0, 6.0));
+            ui.painter()
+                .rect_filled(node_rect, 1.0, node.category_color());
         }
 
         // Draw viewport rectangle
@@ -903,7 +930,8 @@ impl NodeCanvas {
 
         // Calculate node height based on pin count
         let pin_count = node.inputs.len().max(node.outputs.len());
-        let height = self.style.node_header_height + pin_count as f32 * self.style.node_pin_spacing + 10.0;
+        let height =
+            self.style.node_header_height + pin_count as f32 * self.style.node_pin_spacing + 10.0;
 
         // Calculate width based on content
         let title_width = node.display_name().len() as f32 * 8.0;
@@ -1016,21 +1044,32 @@ impl NodeCanvas {
 
     /// Get the first selected node
     pub fn first_selected_node(&self) -> Option<&Node> {
-        self.selection.selected_nodes.iter().next().and_then(|id| self.graph.nodes.get(id))
+        self.selection
+            .selected_nodes
+            .iter()
+            .next()
+            .and_then(|id| self.graph.nodes.get(id))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::nodes::{NodeId, NodeType, Pin, PinType};
+    use super::*;
 
     #[test]
     fn test_graph_operations() {
         let mut graph = NodeGraph::new();
 
         let node1 = Node::new(NodeType::OnInteract, [0.0, 0.0]);
-        let node2 = Node::new(NodeType::MoveEntity { x: 10, y: 0, relative: false }, [200.0, 0.0]);
+        let node2 = Node::new(
+            NodeType::MoveEntity {
+                x: 10,
+                y: 0,
+                relative: false,
+            },
+            [200.0, 0.0],
+        );
 
         let id1 = graph.add_node(node1);
         let id2 = graph.add_node(node2);
@@ -1038,7 +1077,12 @@ mod tests {
         assert_eq!(graph.nodes.len(), 2);
 
         // Test connection
-        let conn = Connection::new(id1, graph.nodes[&id1].outputs[0].id, id2, graph.nodes[&id2].inputs[0].id);
+        let conn = Connection::new(
+            id1,
+            graph.nodes[&id1].outputs[0].id,
+            id2,
+            graph.nodes[&id2].inputs[0].id,
+        );
         assert!(graph.add_connection(conn));
         assert_eq!(graph.connections.len(), 1);
 

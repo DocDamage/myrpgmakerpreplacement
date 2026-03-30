@@ -8,11 +8,7 @@ use futures_util::{SinkExt, StreamExt};
 
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, Mutex, RwLock};
-use tokio_tungstenite::{
-    connect_async,
-    tungstenite::Message,
-    MaybeTlsStream, WebSocketStream,
-};
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use uuid::Uuid;
 
 use crate::{
@@ -178,25 +174,23 @@ impl SyncClient {
         self._receive_task = Some(tokio::spawn(async move {
             while let Some(msg) = read.next().await {
                 match msg {
-                    Ok(Message::Text(text)) => {
-                        match serde_json::from_str::<SyncMessage>(&text) {
-                            Ok(sync_msg) => {
-                                Self::handle_incoming(
-                                    client_id,
-                                    sync_msg,
-                                    &state,
-                                    &collaborators,
-                                    &locked_entities,
-                                    &pending_ops,
-                                    message_handler.as_ref(),
-                                )
-                                .await;
-                            }
-                            Err(e) => {
-                                tracing::warn!("Failed to parse message: {}", e);
-                            }
+                    Ok(Message::Text(text)) => match serde_json::from_str::<SyncMessage>(&text) {
+                        Ok(sync_msg) => {
+                            Self::handle_incoming(
+                                client_id,
+                                sync_msg,
+                                &state,
+                                &collaborators,
+                                &locked_entities,
+                                &pending_ops,
+                                message_handler.as_ref(),
+                            )
+                            .await;
                         }
-                    }
+                        Err(e) => {
+                            tracing::warn!("Failed to parse message: {}", e);
+                        }
+                    },
                     Ok(Message::Close(_)) => {
                         tracing::info!("Connection closed by server");
                         break;
@@ -303,8 +297,15 @@ impl SyncClient {
     }
 
     /// Send entity creation
-    pub async fn create_entity(&self, entity: Entity, components: Vec<crate::protocol::ComponentData>) -> Result<()> {
-        let msg = SyncMessage::EntityCreate { entity_id: entity, components };
+    pub async fn create_entity(
+        &self,
+        entity: Entity,
+        components: Vec<crate::protocol::ComponentData>,
+    ) -> Result<()> {
+        let msg = SyncMessage::EntityCreate {
+            entity_id: entity,
+            components,
+        };
         self.send(msg).await
     }
 
@@ -315,8 +316,15 @@ impl SyncClient {
     }
 
     /// Send component update
-    pub async fn update_component(&self, entity: Entity, component: crate::protocol::ComponentData) -> Result<()> {
-        let msg = SyncMessage::ComponentUpdate { entity_id: entity, component };
+    pub async fn update_component(
+        &self,
+        entity: Entity,
+        component: crate::protocol::ComponentData,
+    ) -> Result<()> {
+        let msg = SyncMessage::ComponentUpdate {
+            entity_id: entity,
+            component,
+        };
         self.send(msg).await
     }
 
@@ -354,7 +362,10 @@ impl SyncClient {
         }
 
         match msg {
-            SyncMessage::Welcome { session_id, collaborators: collab_list } => {
+            SyncMessage::Welcome {
+                session_id,
+                collaborators: collab_list,
+            } => {
                 tracing::info!("Joined session: {}", session_id);
                 let mut collab_map = collaborators.write().await;
                 for presence in collab_list {
@@ -373,14 +384,21 @@ impl SyncClient {
                 }
             }
 
-            SyncMessage::Operation { client_id: sender, op, .. } => {
+            SyncMessage::Operation {
+                client_id: sender,
+                op,
+                ..
+            } => {
                 if sender != client_id {
                     // Apply remote operation
                     tracing::debug!("Received operation from {}: {:?}", sender, op);
                 }
             }
 
-            SyncMessage::CursorMove { client_id: sender, position } => {
+            SyncMessage::CursorMove {
+                client_id: sender,
+                position,
+            } => {
                 if sender != client_id {
                     if let Some(presence) = collaborators.write().await.get_mut(&sender) {
                         presence.cursor = position;
@@ -388,7 +406,10 @@ impl SyncClient {
                 }
             }
 
-            SyncMessage::SelectionChange { client_id: sender, selected_entities } => {
+            SyncMessage::SelectionChange {
+                client_id: sender,
+                selected_entities,
+            } => {
                 if sender != client_id {
                     if let Some(presence) = collaborators.write().await.get_mut(&sender) {
                         presence.selected_entities = selected_entities;
@@ -401,7 +422,10 @@ impl SyncClient {
                 tracing::debug!("Lock granted for entity {:?}", entity_id);
             }
 
-            SyncMessage::LockDenied { entity_id, locked_by } => {
+            SyncMessage::LockDenied {
+                entity_id,
+                locked_by,
+            } => {
                 tracing::warn!(
                     "Lock denied for entity {:?}, already locked by {}",
                     entity_id,
@@ -413,8 +437,13 @@ impl SyncClient {
                 locked_entities.write().await.remove(&entity_id);
             }
 
-            SyncMessage::SyncState { state: project_state } => {
-                tracing::info!("Received sync state for project {}", project_state.project_id);
+            SyncMessage::SyncState {
+                state: project_state,
+            } => {
+                tracing::info!(
+                    "Received sync state for project {}",
+                    project_state.project_id
+                );
             }
 
             SyncMessage::Error { code, message } => {

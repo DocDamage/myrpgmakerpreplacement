@@ -43,24 +43,57 @@ impl NeighborMask {
     /// Create mask from cardinal directions
     pub fn from_cardinals(n: bool, e: bool, s: bool, w: bool) -> Self {
         let mut mask = 0u8;
-        if n { mask |= 1 << 0; }
-        if e { mask |= 1 << 2; }
-        if s { mask |= 1 << 4; }
-        if w { mask |= 1 << 6; }
+        if n {
+            mask |= 1 << 0;
+        }
+        if e {
+            mask |= 1 << 2;
+        }
+        if s {
+            mask |= 1 << 4;
+        }
+        if w {
+            mask |= 1 << 6;
+        }
         Self(mask)
     }
 
     /// Create mask from all 8 directions
-    pub fn from_all(n: bool, ne: bool, e: bool, se: bool, s: bool, sw: bool, w: bool, nw: bool) -> Self {
+    pub fn from_all(
+        n: bool,
+        ne: bool,
+        e: bool,
+        se: bool,
+        s: bool,
+        sw: bool,
+        w: bool,
+        nw: bool,
+    ) -> Self {
         let mut mask = 0u8;
-        if n { mask |= 1 << 0; }
-        if ne { mask |= 1 << 1; }
-        if e { mask |= 1 << 2; }
-        if se { mask |= 1 << 3; }
-        if s { mask |= 1 << 4; }
-        if sw { mask |= 1 << 5; }
-        if w { mask |= 1 << 6; }
-        if nw { mask |= 1 << 7; }
+        if n {
+            mask |= 1 << 0;
+        }
+        if ne {
+            mask |= 1 << 1;
+        }
+        if e {
+            mask |= 1 << 2;
+        }
+        if se {
+            mask |= 1 << 3;
+        }
+        if s {
+            mask |= 1 << 4;
+        }
+        if sw {
+            mask |= 1 << 5;
+        }
+        if w {
+            mask |= 1 << 6;
+        }
+        if nw {
+            mask |= 1 << 7;
+        }
         Self(mask)
     }
 
@@ -113,34 +146,31 @@ impl NeighborMask {
 /// Maps 8-bit neighbor mask to 47-tile set index
 const BLOB47_TABLE: [u32; 256] = {
     let mut table = [0u32; 256];
-    
+
     // This is a simplified blob table
     // Full implementation would have all 47 variations
     // See: https://www.cr31.co.uk/stagecast/wang/blob.html
-    
+
     let mut i = 0u32;
     while i < 256 {
         let mask = i as u8;
-        
+
         // Count connected neighbors
-        let cardinal_count = (mask & 1)
-            + ((mask >> 2) & 1)
-            + ((mask >> 4) & 1)
-            + ((mask >> 6) & 1);
-        
+        let cardinal_count = (mask & 1) + ((mask >> 2) & 1) + ((mask >> 4) & 1) + ((mask >> 6) & 1);
+
         // Simple mapping based on connection count
         table[i as usize] = match cardinal_count {
-            0 => 0,   // Isolated
-            1 => 1,   // End piece
-            2 => 2,   // Corner or straight
-            3 => 10,  // T-junction
-            4 => 22,  // Cross
+            0 => 0,  // Isolated
+            1 => 1,  // End piece
+            2 => 2,  // Corner or straight
+            3 => 10, // T-junction
+            4 => 22, // Cross
             _ => 0,
         };
-        
+
         i += 1;
     }
-    
+
     table
 };
 
@@ -231,7 +261,11 @@ pub struct TerrainType {
 
 impl TerrainType {
     /// Create a new terrain type with autotile
-    pub fn with_autotile(id: impl Into<String>, name: impl Into<String>, config: AutotileConfig) -> Self {
+    pub fn with_autotile(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        config: AutotileConfig,
+    ) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
@@ -371,10 +405,10 @@ mod tests {
     #[test]
     fn test_autotile_config() {
         let config = AutotileConfig::new("test", AutotileType::Wang16, 10);
-        
+
         let mask = NeighborMask::from_cardinals(true, false, true, false);
         let tile = config.get_tile(mask);
-        
+
         // Base (10) + wang16 index for N|S (10 in binary)
         assert_eq!(tile, 10 + 10);
     }
@@ -402,7 +436,7 @@ mod tests {
     #[test]
     fn test_terrain_set() {
         let set = TerrainSet::default_set();
-        
+
         assert_eq!(set.all().len(), 4);
         assert!(set.get("grass").is_some());
         assert!(set.get("water").is_some());

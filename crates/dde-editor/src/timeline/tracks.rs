@@ -47,11 +47,11 @@ impl TrackType {
     /// Get color for UI (RGB)
     pub fn color(&self) -> [u8; 3] {
         match self {
-            TrackType::Camera => [255, 200, 100],    // Orange
-            TrackType::Entity => [100, 200, 255],    // Blue
-            TrackType::Audio => [100, 255, 150],     // Green
-            TrackType::Effect => [255, 100, 200],    // Pink
-            TrackType::Dialogue => [200, 150, 255],  // Purple
+            TrackType::Camera => [255, 200, 100],   // Orange
+            TrackType::Entity => [100, 200, 255],   // Blue
+            TrackType::Audio => [100, 255, 150],    // Green
+            TrackType::Effect => [255, 100, 200],   // Pink
+            TrackType::Dialogue => [200, 150, 255], // Purple
         }
     }
 }
@@ -157,7 +157,10 @@ impl Track {
         }
 
         // Find insertion point
-        match self.keyframes.binary_search_by(|kf| kf.time.partial_cmp(&time).unwrap()) {
+        match self
+            .keyframes
+            .binary_search_by(|kf| kf.time.partial_cmp(&time).unwrap())
+        {
             Ok(index) => {
                 // Update existing keyframe
                 self.keyframes[index].value = value;
@@ -184,7 +187,10 @@ impl Track {
             return false;
         }
 
-        match self.keyframes.binary_search_by(|kf| kf.time.partial_cmp(&time).unwrap()) {
+        match self
+            .keyframes
+            .binary_search_by(|kf| kf.time.partial_cmp(&time).unwrap())
+        {
             Ok(index) => {
                 self.keyframes[index].value = value;
                 self.keyframes[index].interpolation = interpolation;
@@ -205,7 +211,10 @@ impl Track {
             return None;
         }
 
-        match self.keyframes.binary_search_by(|kf| kf.time.partial_cmp(&time).unwrap()) {
+        match self
+            .keyframes
+            .binary_search_by(|kf| kf.time.partial_cmp(&time).unwrap())
+        {
             Ok(index) => {
                 let removed = self.keyframes.remove(index);
                 self.update_time_bounds();
@@ -228,12 +237,21 @@ impl Track {
 
     /// Get the index of the keyframe at or before the given time
     pub fn keyframe_index_at(&self, time: f32) -> Option<usize> {
-        self.keyframes.iter().enumerate().rev().find(|(_, kf)| kf.time <= time).map(|(i, _)| i)
+        self.keyframes
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, kf)| kf.time <= time)
+            .map(|(i, _)| i)
     }
 
     /// Get the next keyframe index after the given time
     pub fn next_keyframe_index(&self, time: f32) -> Option<usize> {
-        self.keyframes.iter().enumerate().find(|(_, kf)| kf.time > time).map(|(i, _)| i)
+        self.keyframes
+            .iter()
+            .enumerate()
+            .find(|(_, kf)| kf.time > time)
+            .map(|(i, _)| i)
     }
 
     /// Move a keyframe to a new time
@@ -246,9 +264,11 @@ impl Track {
             if (self.keyframes[index].time - old_time).abs() < f32::EPSILON {
                 let mut keyframe = self.keyframes.remove(index);
                 keyframe.time = new_time;
-                
+
                 // Re-insert at correct position
-                let new_index = self.keyframes.binary_search_by(|kf| kf.time.partial_cmp(&new_time).unwrap())
+                let new_index = self
+                    .keyframes
+                    .binary_search_by(|kf| kf.time.partial_cmp(&new_time).unwrap())
                     .unwrap_or_else(|i| i);
                 self.keyframes.insert(new_index, keyframe);
                 self.update_time_bounds();
@@ -260,7 +280,8 @@ impl Track {
 
     /// Get all keyframes in time range
     pub fn keyframes_in_range(&self, start: f32, end: f32) -> Vec<&Keyframe> {
-        self.keyframes.iter()
+        self.keyframes
+            .iter()
             .filter(|kf| kf.time >= start && kf.time <= end)
             .collect()
     }
@@ -302,7 +323,8 @@ impl Track {
 
     /// Get the color for this track
     pub fn color(&self) -> [u8; 3] {
-        self.color_override.unwrap_or_else(|| self.track_type.color())
+        self.color_override
+            .unwrap_or_else(|| self.track_type.color())
     }
 
     /// Get all keyframe times (for UI)
@@ -312,17 +334,18 @@ impl Track {
 
     /// Check if this track has any keyframes at the given time (within epsilon)
     pub fn has_keyframe_at(&self, time: f32, epsilon: f32) -> bool {
-        self.keyframes.iter().any(|kf| (kf.time - time).abs() < epsilon)
+        self.keyframes
+            .iter()
+            .any(|kf| (kf.time - time).abs() < epsilon)
     }
 
     /// Get the closest keyframe to the given time
     pub fn closest_keyframe(&self, time: f32) -> Option<&Keyframe> {
-        self.keyframes.iter()
-            .min_by(|a, b| {
-                let dist_a = (a.time - time).abs();
-                let dist_b = (b.time - time).abs();
-                dist_a.partial_cmp(&dist_b).unwrap()
-            })
+        self.keyframes.iter().min_by(|a, b| {
+            let dist_a = (a.time - time).abs();
+            let dist_b = (b.time - time).abs();
+            dist_a.partial_cmp(&dist_b).unwrap()
+        })
     }
 
     /// Duplicate a keyframe at the given time
@@ -335,8 +358,10 @@ impl Track {
             if (kf.time - time).abs() < 0.001 {
                 let mut new_kf = kf.clone();
                 new_kf.time = new_time;
-                
-                let index = self.keyframes.binary_search_by(|k| k.time.partial_cmp(&new_time).unwrap())
+
+                let index = self
+                    .keyframes
+                    .binary_search_by(|k| k.time.partial_cmp(&new_time).unwrap())
                     .unwrap_or_else(|i| i);
                 self.keyframes.insert(index, new_kf);
                 self.update_time_bounds();
@@ -407,17 +432,17 @@ impl TrackGroup {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::keyframes::{CameraValue, Interpolation};
+    use super::*;
 
     #[test]
     fn test_track_add_keyframe() {
         let mut track = Track::new(TrackType::Camera, "Camera Track");
-        
+
         let value = TrackValue::Camera(CameraValue::default());
         assert!(track.add_keyframe(0.0, value.clone()));
         assert_eq!(track.keyframe_count(), 1);
-        
+
         // Adding at same time should update
         assert!(!track.add_keyframe(0.0, value));
         assert_eq!(track.keyframe_count(), 1);
@@ -426,13 +451,19 @@ mod tests {
     #[test]
     fn test_track_value_at() {
         let mut track = Track::new(TrackType::Camera, "Camera Track");
-        
-        let value1 = TrackValue::Camera(CameraValue { zoom: 1.0, ..Default::default() });
-        let value2 = TrackValue::Camera(CameraValue { zoom: 2.0, ..Default::default() });
-        
+
+        let value1 = TrackValue::Camera(CameraValue {
+            zoom: 1.0,
+            ..Default::default()
+        });
+        let value2 = TrackValue::Camera(CameraValue {
+            zoom: 2.0,
+            ..Default::default()
+        });
+
         track.add_keyframe(0.0, value1);
         track.add_keyframe(1.0, value2);
-        
+
         let result = track.value_at(0.5);
         assert!(result.is_some());
     }
@@ -441,11 +472,11 @@ mod tests {
     fn test_track_keyframe_ordering() {
         let mut track = Track::new(TrackType::Camera, "Camera Track");
         let value = TrackValue::Camera(CameraValue::default());
-        
+
         track.add_keyframe(2.0, value.clone());
         track.add_keyframe(0.0, value.clone());
         track.add_keyframe(1.0, value);
-        
+
         let times: Vec<f32> = track.keyframes.iter().map(|kf| kf.time).collect();
         assert_eq!(times, vec![0.0, 1.0, 2.0]);
     }
@@ -454,7 +485,7 @@ mod tests {
     fn test_track_locked() {
         let mut track = Track::new(TrackType::Camera, "Camera Track");
         track.locked = true;
-        
+
         let value = TrackValue::Camera(CameraValue::default());
         assert!(!track.add_keyframe(0.0, value));
         assert!(track.is_empty());
@@ -464,10 +495,10 @@ mod tests {
     fn test_track_move_keyframe() {
         let mut track = Track::new(TrackType::Camera, "Camera Track");
         let value = TrackValue::Camera(CameraValue::default());
-        
+
         track.add_keyframe(0.0, value);
         assert!(track.move_keyframe(0.0, 1.0));
-        
+
         assert!(track.has_keyframe_at(1.0, 0.001));
         assert!(!track.has_keyframe_at(0.0, 0.001));
     }

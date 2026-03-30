@@ -204,7 +204,9 @@ impl QuestGenerator {
                 let reward_type = match reward["type"].as_str() {
                     Some("gold") => RewardType::Gold,
                     Some("xp") => RewardType::XP,
-                    Some("item") => RewardType::Item(reward["item_id"].as_u64().unwrap_or(1) as u32),
+                    Some("item") => {
+                        RewardType::Item(reward["item_id"].as_u64().unwrap_or(1) as u32)
+                    }
                     Some("reputation") => {
                         RewardType::Reputation(reward["faction_id"].as_u64().unwrap_or(1) as u32)
                     }
@@ -590,16 +592,8 @@ impl TemplateQuestGenerator {
     }
 
     /// Generate multiple proposals
-    pub fn generate_proposals(
-        &self,
-        context: &GameContext,
-        count: usize,
-    ) -> Vec<QuestProposal> {
-        let types = [
-            QuestType::Combat,
-            QuestType::Exploration,
-            QuestType::Social,
-        ];
+    pub fn generate_proposals(&self, context: &GameContext, count: usize) -> Vec<QuestProposal> {
+        let types = [QuestType::Combat, QuestType::Exploration, QuestType::Social];
 
         types
             .iter()
@@ -609,15 +603,20 @@ impl TemplateQuestGenerator {
     }
 
     /// Generate a single quest from templates
-    pub fn generate_quest(&self, context: &GameContext, quest_type: QuestType) -> Option<QuestProposal> {
+    pub fn generate_quest(
+        &self,
+        context: &GameContext,
+        quest_type: QuestType,
+    ) -> Option<QuestProposal> {
         let templates = self.get_templates_for_type(quest_type);
-        
+
         if templates.is_empty() {
             return None;
         }
 
         // Select template based on context
-        let index = (context.player_level as usize + context.player_location.1 as usize) % templates.len();
+        let index =
+            (context.player_level as usize + context.player_location.1 as usize) % templates.len();
         let template = &templates[index];
 
         Some(QuestProposal {
@@ -752,10 +751,10 @@ mod tests {
     fn test_template_generator() {
         let template_gen = TemplateQuestGenerator::new();
         let context = create_test_context();
-        
+
         let proposal = template_gen.generate_quest(&context, QuestType::Combat);
         assert!(proposal.is_some());
-        
+
         let proposal = proposal.unwrap();
         assert!(!proposal.title.is_empty());
         assert!(!proposal.description.is_empty());

@@ -22,7 +22,10 @@ pub enum SyncError {
     EntityLocked,
 
     #[error("Lock denied: entity {entity_id:?} is locked by {locked_by}")]
-    LockDenied { entity_id: dde_core::Entity, locked_by: uuid::Uuid },
+    LockDenied {
+        entity_id: dde_core::Entity,
+        locked_by: uuid::Uuid,
+    },
 
     #[error("Database error: {0}")]
     Database(String),

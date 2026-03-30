@@ -34,10 +34,13 @@ pub mod editor;
 pub mod nodes;
 
 pub use compiler::{compile, CompileError};
-pub use debugger::{BtDebugger, BtDebugStats, draw_entity_debug, status_color, status_color_dark};
-pub use editor::BehaviorTreeEditor;
-pub use nodes::{BtNode, BtNodeType, BtNodeError, NodeCategory, MoveTarget, MoveSpeed, Target, ParallelPolicy, VariableValue};
 pub use dde_core::ai::NodeId;
+pub use debugger::{draw_entity_debug, status_color, status_color_dark, BtDebugStats, BtDebugger};
+pub use editor::BehaviorTreeEditor;
+pub use nodes::{
+    BtNode, BtNodeError, BtNodeType, MoveSpeed, MoveTarget, NodeCategory, ParallelPolicy, Target,
+    VariableValue,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -89,7 +92,8 @@ impl BehaviorTreeAsset {
 
     /// Save to file
     pub fn save_to_file(&self, path: &std::path::Path) -> std::io::Result<()> {
-        let json = self.to_json()
+        let json = self
+            .to_json()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
         std::fs::write(path, json)
     }
@@ -97,8 +101,7 @@ impl BehaviorTreeAsset {
     /// Load from file
     pub fn load_from_file(path: &std::path::Path) -> std::io::Result<Self> {
         let json = std::fs::read_to_string(path)?;
-        Self::from_json(&json)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+        Self::from_json(&json).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
 }
 
@@ -130,13 +133,18 @@ pub mod presets {
     /// Basic patrol behavior
     pub fn patrol_behavior() -> BtNode {
         BtNode::new(
-            BtNodeType::Sequence { children: vec![
-                BtNode::new(BtNodeType::MoveTo { 
-                    target: MoveTarget::PatrolPoint(0), 
-                    speed: MoveSpeed::Walk 
-                }, [0.0, 100.0]),
-                BtNode::new(BtNodeType::Wait { seconds: 2.0 }, [150.0, 100.0]),
-            ]},
+            BtNodeType::Sequence {
+                children: vec![
+                    BtNode::new(
+                        BtNodeType::MoveTo {
+                            target: MoveTarget::PatrolPoint(0),
+                            speed: MoveSpeed::Walk,
+                        },
+                        [0.0, 100.0],
+                    ),
+                    BtNode::new(BtNodeType::Wait { seconds: 2.0 }, [150.0, 100.0]),
+                ],
+            },
             [0.0, 0.0],
         )
     }
@@ -144,26 +152,46 @@ pub mod presets {
     /// Basic combat behavior
     pub fn combat_behavior() -> BtNode {
         BtNode::new(
-            BtNodeType::Selector { children: vec![
-                BtNode::new(
-                    BtNodeType::Sequence { children: vec![
-                        BtNode::new(BtNodeType::HealthBelow { percent: 0.25 }, [0.0, 150.0]),
-                        BtNode::new(BtNodeType::Flee, [0.0, 250.0]),
-                    ]},
-                    [0.0, 100.0],
-                ),
-                BtNode::new(
-                    BtNodeType::Sequence { children: vec![
-                        BtNode::new(BtNodeType::IsPlayerNearby { radius: 5.0 }, [200.0, 150.0]),
-                        BtNode::new(BtNodeType::Attack { target: Target::Player }, [200.0, 250.0]),
-                    ]},
-                    [200.0, 100.0],
-                ),
-                BtNode::new(BtNodeType::MoveTo { 
-                    target: MoveTarget::Player, 
-                    speed: MoveSpeed::Run 
-                }, [400.0, 100.0]),
-            ]},
+            BtNodeType::Selector {
+                children: vec![
+                    BtNode::new(
+                        BtNodeType::Sequence {
+                            children: vec![
+                                BtNode::new(
+                                    BtNodeType::HealthBelow { percent: 0.25 },
+                                    [0.0, 150.0],
+                                ),
+                                BtNode::new(BtNodeType::Flee, [0.0, 250.0]),
+                            ],
+                        },
+                        [0.0, 100.0],
+                    ),
+                    BtNode::new(
+                        BtNodeType::Sequence {
+                            children: vec![
+                                BtNode::new(
+                                    BtNodeType::IsPlayerNearby { radius: 5.0 },
+                                    [200.0, 150.0],
+                                ),
+                                BtNode::new(
+                                    BtNodeType::Attack {
+                                        target: Target::Player,
+                                    },
+                                    [200.0, 250.0],
+                                ),
+                            ],
+                        },
+                        [200.0, 100.0],
+                    ),
+                    BtNode::new(
+                        BtNodeType::MoveTo {
+                            target: MoveTarget::Player,
+                            speed: MoveSpeed::Run,
+                        },
+                        [400.0, 100.0],
+                    ),
+                ],
+            },
             [0.0, 0.0],
         )
     }
@@ -171,53 +199,75 @@ pub mod presets {
     /// Smart guard behavior with multiple states
     pub fn guard_behavior() -> BtNode {
         BtNode::new(
-            BtNodeType::Selector { children: vec![
-                // Combat mode
-                BtNode::new(
-                    BtNodeType::Sequence { children: vec![
-                        BtNode::new(BtNodeType::InCombat, [0.0, 150.0]),
-                        BtNode::new(
-                            BtNodeType::Cooldown { 
-                                child: Box::new(BtNode::new(
-                                    BtNodeType::Attack { target: Target::Player },
-                                    [150.0, 250.0],
-                                )),
-                                seconds: 1.0,
-                            },
-                            [150.0, 200.0],
-                        ),
-                    ]},
-                    [0.0, 100.0],
-                ),
-                // Alert mode - player nearby
-                BtNode::new(
-                    BtNodeType::Sequence { children: vec![
-                        BtNode::new(BtNodeType::IsPlayerNearby { radius: 10.0 }, [300.0, 150.0]),
-                        BtNode::new(BtNodeType::Follow { 
-                            target: Target::Player, 
-                            distance: 3.0 
-                        }, [300.0, 250.0]),
-                    ]},
-                    [300.0, 100.0],
-                ),
-                // Idle patrol
-                BtNode::new(
-                    BtNodeType::Repeater { 
-                        child: Box::new(BtNode::new(
-                            BtNodeType::Sequence { children: vec![
-                                BtNode::new(BtNodeType::MoveTo { 
-                                    target: MoveTarget::PatrolPoint(0), 
-                                    speed: MoveSpeed::Walk 
-                                }, [500.0, 250.0]),
-                                BtNode::new(BtNodeType::Wait { seconds: 3.0 }, [650.0, 250.0]),
-                            ]},
-                            [500.0, 200.0],
-                        )),
-                        count: None, // Forever
-                    },
-                    [500.0, 100.0],
-                ),
-            ]},
+            BtNodeType::Selector {
+                children: vec![
+                    // Combat mode
+                    BtNode::new(
+                        BtNodeType::Sequence {
+                            children: vec![
+                                BtNode::new(BtNodeType::InCombat, [0.0, 150.0]),
+                                BtNode::new(
+                                    BtNodeType::Cooldown {
+                                        child: Box::new(BtNode::new(
+                                            BtNodeType::Attack {
+                                                target: Target::Player,
+                                            },
+                                            [150.0, 250.0],
+                                        )),
+                                        seconds: 1.0,
+                                    },
+                                    [150.0, 200.0],
+                                ),
+                            ],
+                        },
+                        [0.0, 100.0],
+                    ),
+                    // Alert mode - player nearby
+                    BtNode::new(
+                        BtNodeType::Sequence {
+                            children: vec![
+                                BtNode::new(
+                                    BtNodeType::IsPlayerNearby { radius: 10.0 },
+                                    [300.0, 150.0],
+                                ),
+                                BtNode::new(
+                                    BtNodeType::Follow {
+                                        target: Target::Player,
+                                        distance: 3.0,
+                                    },
+                                    [300.0, 250.0],
+                                ),
+                            ],
+                        },
+                        [300.0, 100.0],
+                    ),
+                    // Idle patrol
+                    BtNode::new(
+                        BtNodeType::Repeater {
+                            child: Box::new(BtNode::new(
+                                BtNodeType::Sequence {
+                                    children: vec![
+                                        BtNode::new(
+                                            BtNodeType::MoveTo {
+                                                target: MoveTarget::PatrolPoint(0),
+                                                speed: MoveSpeed::Walk,
+                                            },
+                                            [500.0, 250.0],
+                                        ),
+                                        BtNode::new(
+                                            BtNodeType::Wait { seconds: 3.0 },
+                                            [650.0, 250.0],
+                                        ),
+                                    ],
+                                },
+                                [500.0, 200.0],
+                            )),
+                            count: None, // Forever
+                        },
+                        [500.0, 100.0],
+                    ),
+                ],
+            },
             [0.0, 0.0],
         )
     }
@@ -225,26 +275,41 @@ pub mod presets {
     /// Merchant NPC behavior
     pub fn merchant_behavior() -> BtNode {
         BtNode::new(
-            BtNodeType::Selector { children: vec![
-                // Interact with player
-                BtNode::new(
-                    BtNodeType::Sequence { children: vec![
-                        BtNode::new(BtNodeType::IsPlayerNearby { radius: 2.0 }, [0.0, 150.0]),
-                        BtNode::new(BtNodeType::Speak { dialogue_id: 100 }, [0.0, 250.0]),
-                    ]},
-                    [0.0, 100.0],
-                ),
-                // Work schedule
-                BtNode::new(
-                    BtNodeType::Sequence { children: vec![
-                        BtNode::new(BtNodeType::TimeOfDay { min: 8, max: 18 }, [200.0, 150.0]),
-                        BtNode::new(BtNodeType::PlayAnimation { anim_id: 1 }, [200.0, 250.0]),
-                    ]},
-                    [200.0, 100.0],
-                ),
-                // Rest
-                BtNode::new(BtNodeType::PlayAnimation { anim_id: 2 }, [400.0, 100.0]),
-            ]},
+            BtNodeType::Selector {
+                children: vec![
+                    // Interact with player
+                    BtNode::new(
+                        BtNodeType::Sequence {
+                            children: vec![
+                                BtNode::new(
+                                    BtNodeType::IsPlayerNearby { radius: 2.0 },
+                                    [0.0, 150.0],
+                                ),
+                                BtNode::new(BtNodeType::Speak { dialogue_id: 100 }, [0.0, 250.0]),
+                            ],
+                        },
+                        [0.0, 100.0],
+                    ),
+                    // Work schedule
+                    BtNode::new(
+                        BtNodeType::Sequence {
+                            children: vec![
+                                BtNode::new(
+                                    BtNodeType::TimeOfDay { min: 8, max: 18 },
+                                    [200.0, 150.0],
+                                ),
+                                BtNode::new(
+                                    BtNodeType::PlayAnimation { anim_id: 1 },
+                                    [200.0, 250.0],
+                                ),
+                            ],
+                        },
+                        [200.0, 100.0],
+                    ),
+                    // Rest
+                    BtNode::new(BtNodeType::PlayAnimation { anim_id: 2 }, [400.0, 100.0]),
+                ],
+            },
             [0.0, 0.0],
         )
     }
@@ -252,17 +317,17 @@ pub mod presets {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::nodes::BtNodeType;
+    use super::*;
 
     #[test]
     fn test_asset_serialization() {
         let root = BtNode::new(BtNodeType::InCombat, [0.0, 0.0]);
         let asset = BehaviorTreeAsset::new("Test Tree", root);
-        
+
         let json = asset.to_json().unwrap();
         let loaded = BehaviorTreeAsset::from_json(&json).unwrap();
-        
+
         assert_eq!(asset.name, loaded.name);
         assert_eq!(asset.version, loaded.version);
     }

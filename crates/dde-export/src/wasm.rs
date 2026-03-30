@@ -1,8 +1,8 @@
 //! WASM export for web deployment
 
-use std::path::{Path, PathBuf};
-use std::fs;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /// WASM export configuration
 #[derive(Debug, Clone)]
@@ -47,41 +47,41 @@ impl WasmExporter {
     pub fn new(config: WasmExportConfig) -> Self {
         Self { config }
     }
-    
+
     /// Export the game
     pub fn export(&self, project_path: &Path) -> Result<WasmExportResult, WasmExportError> {
         // Create output directory
         fs::create_dir_all(&self.config.output_dir)?;
-        
+
         // Copy and optimize assets
         let asset_manifest = self.process_assets(project_path)?;
-        
+
         // Generate HTML wrapper
         self.generate_html(&asset_manifest)?;
-        
+
         // Generate JavaScript glue
         self.generate_js_glue(&asset_manifest)?;
-        
+
         // Generate service worker for offline play
         self.generate_service_worker()?;
-        
+
         // Generate manifest for PWA
         self.generate_pwa_manifest()?;
-        
+
         Ok(WasmExportResult {
             output_dir: self.config.output_dir.clone(),
             total_size: self.calculate_total_size()?,
             files_created: self.list_output_files()?,
         })
     }
-    
+
     /// Process and optimize assets for web
     fn process_assets(&self, project_path: &Path) -> Result<AssetManifest, WasmExportError> {
         let assets_dir = self.config.output_dir.join("assets");
         fs::create_dir_all(&assets_dir)?;
-        
+
         let mut manifest = AssetManifest::default();
-        
+
         // Copy SQLite database
         let db_path = project_path.join("world.db");
         if db_path.exists() {
@@ -89,23 +89,24 @@ impl WasmExporter {
             fs::copy(&db_path, &db_output)?;
             manifest.database_size = fs::metadata(&db_output)?.len();
         }
-        
+
         // Process images
         let img_dir = project_path.join("assets").join("images");
         if img_dir.exists() {
             for entry in fs::read_dir(&img_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                
+
                 if let Some(ext) = path.extension() {
                     let ext_str = ext.to_string_lossy().to_lowercase();
                     if ext_str == "png" || ext_str == "jpg" || ext_str == "jpeg" {
                         // Convert to WebP for smaller size
-                        let output_name = format!("{}.webp", path.file_stem().unwrap().to_string_lossy());
+                        let output_name =
+                            format!("{}.webp", path.file_stem().unwrap().to_string_lossy());
                         let output_path = assets_dir.join(&output_name);
-                        
+
                         self.convert_to_webp(&path, &output_path)?;
-                        
+
                         manifest.images.push(AssetInfo {
                             name: output_name,
                             size: fs::metadata(&output_path)?.len(),
@@ -115,21 +116,22 @@ impl WasmExporter {
                 }
             }
         }
-        
+
         // Process audio
         let audio_dir = project_path.join("assets").join("audio");
         if audio_dir.exists() {
             for entry in fs::read_dir(&audio_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                
+
                 // Convert to Ogg Vorbis for web
                 if let Some(ext) = path.extension() {
                     let ext_str = ext.to_string_lossy().to_lowercase();
                     if ext_str == "wav" || ext_str == "mp3" {
-                        let output_name = format!("{}.ogg", path.file_stem().unwrap().to_string_lossy());
+                        let output_name =
+                            format!("{}.ogg", path.file_stem().unwrap().to_string_lossy());
                         let _output_path = assets_dir.join(&output_name);
-                        
+
                         // For now, record the planned conversion
                         // Actual conversion would require additional dependencies
                         manifest.audio.push(AssetInfo {
@@ -141,14 +143,14 @@ impl WasmExporter {
                 }
             }
         }
-        
+
         // Write manifest
         let manifest_json = serde_json::to_string_pretty(&manifest)?;
         fs::write(assets_dir.join("manifest.json"), manifest_json)?;
-        
+
         Ok(manifest)
     }
-    
+
     /// Generate HTML wrapper
     fn generate_html(&self, _manifest: &AssetManifest) -> Result<(), WasmExportError> {
         let html = format!(
@@ -219,11 +221,11 @@ impl WasmExporter {
             width = self.config.canvas_width,
             height = self.config.canvas_height
         );
-        
+
         fs::write(self.config.output_dir.join("index.html"), html)?;
         Ok(())
     }
-    
+
     /// Generate JavaScript glue code
     fn generate_js_glue(&self, manifest: &AssetManifest) -> Result<(), WasmExportError> {
         let js = format!(
@@ -290,11 +292,11 @@ if ('serviceWorker' in navigator) {{
             audio = self.config.enable_audio,
             storage = self.config.enable_storage
         );
-        
+
         fs::write(self.config.output_dir.join("game.js"), js)?;
         Ok(())
     }
-    
+
     /// Generate service worker for offline play
     fn generate_service_worker(&self) -> Result<(), WasmExportError> {
         let sw = r#"// Service Worker for offline play
@@ -327,11 +329,11 @@ self.addEventListener('fetch', event => {
     );
 });
 "#;
-        
+
         fs::write(self.config.output_dir.join("sw.js"), sw)?;
         Ok(())
     }
-    
+
     /// Generate PWA manifest
     fn generate_pwa_manifest(&self) -> Result<(), WasmExportError> {
         let manifest = serde_json::json!({
@@ -354,14 +356,14 @@ self.addEventListener('fetch', event => {
                 }
             ]
         });
-        
+
         fs::write(
             self.config.output_dir.join("manifest.json"),
-            serde_json::to_string_pretty(&manifest)?
+            serde_json::to_string_pretty(&manifest)?,
         )?;
         Ok(())
     }
-    
+
     /// Convert image to WebP
     fn convert_to_webp(&self, input: &Path, output: &Path) -> Result<(), WasmExportError> {
         // In production, use image crate with webp feature
@@ -369,7 +371,7 @@ self.addEventListener('fetch', event => {
         fs::copy(input, output)?;
         Ok(())
     }
-    
+
     fn calculate_total_size(&self) -> Result<u64, WasmExportError> {
         let mut total = 0u64;
         for entry in walkdir::WalkDir::new(&self.config.output_dir) {
@@ -380,7 +382,7 @@ self.addEventListener('fetch', event => {
         }
         Ok(total)
     }
-    
+
     fn list_output_files(&self) -> Result<Vec<PathBuf>, WasmExportError> {
         let mut files = Vec::new();
         for entry in walkdir::WalkDir::new(&self.config.output_dir) {

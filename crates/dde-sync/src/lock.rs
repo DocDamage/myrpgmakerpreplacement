@@ -29,19 +29,22 @@ impl LockManager {
     /// Returns true if lock was acquired, false if already locked by another client
     pub fn try_lock(&self, entity: Entity, client_id: Uuid, username: &str) -> bool {
         let mut locks = self.locks.write().unwrap();
-        
+
         if let Some(existing) = locks.get(&entity) {
             if existing.client_id != client_id {
                 return false; // Already locked by someone else
             }
         }
-        
-        locks.insert(entity, LockInfo {
-            client_id,
-            username: username.to_string(),
-            timestamp: current_timestamp(),
-        });
-        
+
+        locks.insert(
+            entity,
+            LockInfo {
+                client_id,
+                username: username.to_string(),
+                timestamp: current_timestamp(),
+            },
+        );
+
         true
     }
 
@@ -49,14 +52,14 @@ impl LockManager {
     /// Returns true if the lock was released, false if it wasn't locked or locked by another client
     pub fn unlock(&self, entity: Entity, client_id: Uuid) -> bool {
         let mut locks = self.locks.write().unwrap();
-        
+
         if let Some(existing) = locks.get(&entity) {
             if existing.client_id == client_id {
                 locks.remove(&entity);
                 return true;
             }
         }
-        
+
         false
     }
 
@@ -68,11 +71,11 @@ impl LockManager {
             .filter(|(_, info)| info.client_id == client_id)
             .map(|(entity, _)| *entity)
             .collect();
-        
+
         for entity in &to_remove {
             locks.remove(entity);
         }
-        
+
         to_remove
     }
 
@@ -119,11 +122,11 @@ impl LockManager {
             .filter(|(_, info)| now - info.timestamp > max_age_ms)
             .map(|(entity, _)| *entity)
             .collect();
-        
+
         for entity in &to_remove {
             locks.remove(entity);
         }
-        
+
         to_remove
     }
 }

@@ -8,8 +8,8 @@ use crate::Result;
 
 pub mod v2_asset_os;
 pub mod v3_screenshots;
-pub mod v4_visual_scripts;
 pub mod v4_cutscenes;
+pub mod v4_visual_scripts;
 
 /// Current schema version
 pub const CURRENT_SCHEMA_VERSION: i32 = 5;

@@ -34,9 +34,8 @@ pub use replay::{
 
 // Re-export save system types
 pub use save::{
-    encrypt_save, decrypt_save, verify_password, generate_password,
-    EncryptedSave, EncryptionError,
-    SaveManager, SaveConfig, SaveMetadata, SaveError,
+    decrypt_save, encrypt_save, generate_password, verify_password, EncryptedSave, EncryptionError,
+    SaveConfig, SaveError, SaveManager, SaveMetadata,
 };
 
 use std::time::Duration;

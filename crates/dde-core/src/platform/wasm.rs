@@ -1,7 +1,7 @@
 //! WASM platform support
 
 /// WASM platform initialization and utilities
-/// 
+///
 /// This module provides WASM-specific functionality for running the engine
 /// in web browsers via WebAssembly.
 
@@ -13,20 +13,20 @@ use web_sys::{window, HtmlCanvasElement, WebGl2RenderingContext};
 pub fn init_wasm(canvas_id: &str) -> Result<WebGl2RenderingContext, WasmError> {
     let window = window().ok_or(WasmError::NoWindow)?;
     let document = window.document().ok_or(WasmError::NoDocument)?;
-    
+
     let canvas: HtmlCanvasElement = document
         .get_element_by_id(canvas_id)
         .ok_or(WasmError::CanvasNotFound)?
         .dyn_into()
         .map_err(|_| WasmError::CanvasNotFound)?;
-    
+
     let context: WebGl2RenderingContext = canvas
         .get_context("webgl2")
         .map_err(|_| WasmError::WebGlNotSupported)?
         .ok_or(WasmError::WebGlNotSupported)?
         .dyn_into()
         .map_err(|_| WasmError::WebGlNotSupported)?;
-    
+
     Ok(context)
 }
 

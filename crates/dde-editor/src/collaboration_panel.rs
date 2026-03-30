@@ -52,7 +52,9 @@ impl CollaborationPanel {
             client: None,
             connection_status: ConnectionStatus::Disconnected,
             server_url: "ws://localhost:8080/sync".to_string(),
-            username: std::env::var("USER").or_else(|_| std::env::var("USERNAME")).unwrap_or_else(|_| "Anonymous".to_string()),
+            username: std::env::var("USER")
+                .or_else(|_| std::env::var("USERNAME"))
+                .unwrap_or_else(|_| "Anonymous".to_string()),
             chat_input: String::new(),
             show_cursors: true,
             chat_messages: Vec::new(),
@@ -167,10 +169,7 @@ impl CollaborationPanel {
                 for msg in &self.chat_messages {
                     if msg.is_system {
                         ui.horizontal_wrapped(|ui| {
-                            ui.colored_label(
-                                egui::Color32::GRAY,
-                                format!("[System] {}", msg.text),
-                            );
+                            ui.colored_label(egui::Color32::GRAY, format!("[System] {}", msg.text));
                         });
                     } else {
                         ui.horizontal_wrapped(|ui| {
@@ -289,13 +288,13 @@ fn current_timestamp() -> u64 {
 pub trait CollaborationExt {
     /// Get the collaboration panel
     fn collaboration_panel(&mut self) -> Option<&mut CollaborationPanel>;
-    
+
     /// Draw collaboration cursors overlay
     fn draw_collaboration_cursors(&mut self, ctx: &egui::Context);
-    
+
     /// Connect to collaboration server
     fn connect_collaboration(&mut self, project_id: &str);
-    
+
     /// Disconnect from collaboration server
     fn disconnect_collaboration(&mut self);
 }

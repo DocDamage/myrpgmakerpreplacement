@@ -327,9 +327,9 @@ impl SyncPanel {
     fn draw_pending_tab(&mut self, ui: &mut egui::Ui) {
         ui.label("Pending Changes");
         ui.label("Track entities and components waiting to be synchronized.");
-        
+
         ui.add_space(10.0);
-        
+
         ui.label("(Pending changes list would appear here)");
         ui.label("- Entity 123: Position modified");
         ui.label("- Entity 456: Stats modified");
@@ -340,9 +340,9 @@ impl SyncPanel {
     fn draw_conflicts_tab(&mut self, ui: &mut egui::Ui) {
         ui.label("Pending Conflicts");
         ui.label("Review and resolve synchronization conflicts.");
-        
+
         ui.add_space(10.0);
-        
+
         ui.label("(Conflicts list would appear here)");
         ui.label("No pending conflicts.");
     }
@@ -379,7 +379,7 @@ impl SyncPanel {
         } else {
             Some(Duration::from_secs(interval_secs as u64))
         };
-        
+
         if new_interval != interface.auto_sync_interval() {
             interface.set_auto_sync_interval(new_interval);
         }
@@ -426,7 +426,7 @@ impl SyncPanel {
         // Danger zone
         ui.heading("Danger Zone");
         ui.separator();
-        
+
         ui.horizontal(|ui| {
             if ui
                 .button("🗑️ Clear All Mappings")
@@ -552,13 +552,13 @@ mod tests {
     #[test]
     fn test_mock_sync_interface() {
         let mut mock = MockSyncInterface::new();
-        
+
         assert!(!mock.is_syncing());
         assert_eq!(mock.pending_changes(), 5);
-        
+
         mock.sync(SyncDirection::Bidirectional);
         assert!(mock.is_syncing());
-        
+
         mock.set_conflict_strategy(ConflictStrategy::DatabaseWins);
         assert_eq!(mock.conflict_strategy(), ConflictStrategy::DatabaseWins);
     }

@@ -310,7 +310,9 @@ pub struct ChangeBatch {
 impl ChangeBatch {
     /// Create a new empty batch
     pub fn new() -> Self {
-        Self { changes: Vec::new() }
+        Self {
+            changes: Vec::new(),
+        }
     }
 
     /// Add a change to the batch
@@ -357,10 +359,10 @@ mod tests {
     #[test]
     fn test_track_entity_change() {
         let mut tracker = ChangeTracker::new();
-        
+
         tracker.track_entity_change(1, ChangeKind::Created);
         assert_eq!(tracker.pending_count(), 1);
-        
+
         let change = tracker.get_pending(1).unwrap();
         assert_eq!(change.kind, ChangeKind::Created);
         assert_eq!(change.entity_id, 1);
@@ -369,9 +371,9 @@ mod tests {
     #[test]
     fn test_track_component_change() {
         let mut tracker = ChangeTracker::new();
-        
+
         tracker.track_component_change(1, "Position", ChangeKind::Modified);
-        
+
         let change = tracker.get_pending(1).unwrap();
         assert_eq!(change.kind, ChangeKind::Modified);
         assert_eq!(change.component_changes.len(), 1);
@@ -381,18 +383,18 @@ mod tests {
     #[test]
     fn test_change_merging() {
         let mut tracker = ChangeTracker::new();
-        
+
         // Create then modify = Create (with updates)
         tracker.track_entity_change(1, ChangeKind::Created);
         tracker.track_entity_change(1, ChangeKind::Modified);
-        
+
         let change = tracker.get_pending(1).unwrap();
         assert_eq!(change.kind, ChangeKind::Created);
-        
+
         // Modify then delete = Delete
         tracker.track_entity_change(2, ChangeKind::Modified);
         tracker.track_entity_change(2, ChangeKind::Deleted);
-        
+
         let change = tracker.get_pending(2).unwrap();
         assert_eq!(change.kind, ChangeKind::Deleted);
     }
@@ -400,14 +402,14 @@ mod tests {
     #[test]
     fn test_component_change_merging() {
         let mut tracker = ChangeTracker::new();
-        
+
         tracker.track_component_change(1, "Position", ChangeKind::Created);
         tracker.track_component_change(1, "Stats", ChangeKind::Created);
         tracker.track_component_change(1, "Position", ChangeKind::Modified);
-        
+
         let change = tracker.get_pending(1).unwrap();
         assert_eq!(change.component_changes.len(), 2);
-        
+
         // Position should stay as Created (Created + Modified = Created with updates)
         let pos_change = change
             .component_changes
@@ -420,17 +422,17 @@ mod tests {
     #[test]
     fn test_clear_pending() {
         let mut tracker = ChangeTracker::new();
-        
+
         tracker.track_entity_change(1, ChangeKind::Created);
         tracker.track_entity_change(2, ChangeKind::Modified);
-        
+
         assert_eq!(tracker.pending_count(), 2);
-        
+
         tracker.clear_pending(1);
         assert_eq!(tracker.pending_count(), 1);
         assert!(tracker.get_pending(1).is_none());
         assert!(tracker.get_pending(2).is_some());
-        
+
         // Check history
         assert_eq!(tracker.history().len(), 1);
     }
@@ -438,10 +440,10 @@ mod tests {
     #[test]
     fn test_flush() {
         let mut tracker = ChangeTracker::new();
-        
+
         tracker.track_entity_change(1, ChangeKind::Created);
         tracker.track_entity_change(2, ChangeKind::Modified);
-        
+
         let flushed = tracker.flush();
         assert_eq!(flushed.len(), 2);
         assert_eq!(tracker.pending_count(), 0);
@@ -451,12 +453,12 @@ mod tests {
     #[test]
     fn test_count_by_kind() {
         let mut tracker = ChangeTracker::new();
-        
+
         tracker.track_entity_change(1, ChangeKind::Created);
         tracker.track_entity_change(2, ChangeKind::Modified);
         tracker.track_entity_change(3, ChangeKind::Deleted);
         tracker.track_entity_change(4, ChangeKind::Modified);
-        
+
         let counts = tracker.count_by_kind();
         assert_eq!(counts.get(&ChangeKind::Created), Some(&1));
         assert_eq!(counts.get(&ChangeKind::Modified), Some(&2));
@@ -466,19 +468,19 @@ mod tests {
     #[test]
     fn test_history_limit() {
         let mut tracker = ChangeTracker::with_capacity(3);
-        
+
         tracker.track_entity_change(1, ChangeKind::Created);
         tracker.flush();
-        
+
         tracker.track_entity_change(2, ChangeKind::Created);
         tracker.flush();
-        
+
         tracker.track_entity_change(3, ChangeKind::Created);
         tracker.flush();
-        
+
         tracker.track_entity_change(4, ChangeKind::Created);
         tracker.flush();
-        
+
         // History should only have 3 most recent
         assert_eq!(tracker.history().len(), 3);
     }

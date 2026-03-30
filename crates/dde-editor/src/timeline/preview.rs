@@ -65,7 +65,7 @@ impl PreviewCamera {
         };
 
         let position = self.position + shake_offset;
-        
+
         Mat4::look_at_rh(
             position,
             position - Vec3::Z, // Look down -Z
@@ -91,10 +91,10 @@ impl PreviewCamera {
             let rotation_rad = self.rotation.to_radians();
             let cos_r = rotation_rad.cos();
             let sin_r = rotation_rad.sin();
-            
+
             let x = self.position.x;
             let y = self.position.y;
-            
+
             self.position.x = x * cos_r - y * sin_r;
             self.position.y = x * sin_r + y * cos_r;
         }
@@ -172,11 +172,11 @@ impl PreviewRenderer {
     /// Render one frame of the cutscene at the current playhead position
     pub fn render(&mut self, timeline: &TimelineEditor, _world: &World) -> PreviewFrame {
         let time = timeline.playhead;
-        
+
         // Sample all tracks at current time
         let mut camera_value: Option<CameraValue> = None;
         let mut effect_state = PreviewEffectState::default();
-        let mut entity_states: std::collections::HashMap<Entity, PreviewEntityState> = 
+        let mut entity_states: std::collections::HashMap<Entity, PreviewEntityState> =
             std::collections::HashMap::new();
 
         for track in &timeline.tracks {
@@ -191,12 +191,15 @@ impl PreviewRenderer {
                     }
                     TrackValue::Entity(ent) => {
                         if let Some(entity) = track.target {
-                            entity_states.insert(entity, PreviewEntityState {
-                                position: ent.position.into(),
-                                animation_id: ent.animation_id,
-                                visible: ent.visible,
-                                direction: ent.direction,
-                            });
+                            entity_states.insert(
+                                entity,
+                                PreviewEntityState {
+                                    position: ent.position.into(),
+                                    animation_id: ent.animation_id,
+                                    visible: ent.visible,
+                                    direction: ent.direction,
+                                },
+                            );
                         }
                     }
                     TrackValue::Effect(eff) => {
@@ -373,7 +376,11 @@ impl VideoExporter {
     }
 
     /// Export timeline to PNG sequence
-    pub fn export(&mut self, timeline: &TimelineEditor, world: &World) -> Result<u32, Box<dyn std::error::Error>> {
+    pub fn export(
+        &mut self,
+        timeline: &TimelineEditor,
+        world: &World,
+    ) -> Result<u32, Box<dyn std::error::Error>> {
         std::fs::create_dir_all(&self.output_dir)?;
 
         let mut renderer = PreviewRenderer::new();
@@ -385,9 +392,9 @@ impl VideoExporter {
             let time = frame as f32 * frame_time;
             let mut frame_timeline = timeline.clone();
             frame_timeline.playhead = time;
-            
+
             renderer.render(&frame_timeline, world);
-            
+
             if let Some(frame_data) = renderer.capture_frame() {
                 let filename = format!("frame_{:06}.png", frame);
                 let path = self.output_dir.join(filename);
@@ -482,7 +489,7 @@ mod tests {
         let exporter = VideoExporter::new("/tmp/export")
             .with_frame_rate(60.0)
             .with_resolution(1920, 1080);
-        
+
         assert_eq!(exporter.frame_rate, 60.0);
         assert_eq!(exporter.width, 1920);
         assert_eq!(exporter.height, 1080);
@@ -492,7 +499,7 @@ mod tests {
     fn test_preview_playback_speed() {
         let playback = PreviewPlayback::new().with_speed(2.0);
         assert_eq!(playback.speed, 2.0);
-        
+
         let dt = playback.calculate_dt(0.016);
         assert!((dt - 0.032).abs() < 0.001);
     }

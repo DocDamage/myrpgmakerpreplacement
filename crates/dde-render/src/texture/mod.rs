@@ -18,8 +18,6 @@ pub struct Texture {
     pub dimensions: (u32, u32),
 }
 
-
-
 impl Texture {
     /// Load texture from file with hot-reload tracking
     pub fn from_file(
@@ -66,7 +64,7 @@ impl Texture {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -192,16 +190,11 @@ impl TextureManager {
 
     /// Load a texture from file
     pub fn load(&self, path: &Path) -> Option<TextureHandle> {
-        let texture = Texture::from_file(
-            path,
-            &self.device,
-            &self.queue,
-            &self.bind_group_layout,
-        )?;
+        let texture = Texture::from_file(path, &self.device, &self.queue, &self.bind_group_layout)?;
 
         let mut textures = self.textures.lock().ok()?;
         textures.insert(path.to_path_buf(), texture);
-        
+
         Some(TextureHandle {
             path: path.to_path_buf(),
         })
@@ -237,13 +230,13 @@ impl TextureManager {
         };
         textures.contains_key(path)
     }
-    
+
     /// Get texture dimensions
     pub fn get_dimensions(&self, path: &Path) -> Option<(u32, u32)> {
         let textures = self.textures.lock().ok()?;
         textures.get(path).map(|t| t.dimensions)
     }
-    
+
     /// Get texture last modified time
     pub fn get_last_modified(&self, path: &Path) -> Option<SystemTime> {
         let textures = self.textures.lock().ok()?;

@@ -20,7 +20,11 @@ pub struct SerializableVec3 {
 
 impl From<Vec3> for SerializableVec3 {
     fn from(v: Vec3) -> Self {
-        Self { x: v.x, y: v.y, z: v.z }
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
     }
 }
 
@@ -99,23 +103,23 @@ impl BehaviorTreeRunner {
     /// Tick the behavior tree
     pub fn tick(&mut self, entity: Entity, world: &mut World) -> BtStatus {
         self.current_path.clear();
-        
+
         // If we have a running node from previous tick, resume from there
         if let Some(running_id) = self.running_node {
             self.current_path.push(running_id);
         }
-        
+
         // Clone the root to avoid borrow issues
         let root = self.tree.root.clone();
         let result = self.execute_node(&root, entity, world);
-        
+
         // Update running node for next tick
         self.running_node = if result == BtStatus::Running {
             self.current_path.last().copied()
         } else {
             None
         };
-        
+
         result
     }
 
@@ -133,7 +137,7 @@ impl BehaviorTreeRunner {
     fn execute_node(&mut self, node: &RuntimeNode, entity: Entity, world: &mut World) -> BtStatus {
         let node_id = node.id();
         self.current_path.push(node_id);
-        
+
         let result = match node {
             RuntimeNode::Selector { children, .. } => {
                 // Try each child until one succeeds
@@ -157,17 +161,17 @@ impl BehaviorTreeRunner {
                 }
                 BtStatus::Success
             }
-            RuntimeNode::Parallel { 
-                children, 
-                success_policy, 
-                failure_policy, 
-                .. 
+            RuntimeNode::Parallel {
+                children,
+                success_policy,
+                failure_policy,
+                ..
             } => {
                 // Execute all children and apply policies
                 let mut success_count = 0;
                 let mut failure_count = 0;
                 let mut running_count = 0;
-                
+
                 for child in children {
                     match self.execute_node(child, entity, world) {
                         BtStatus::Success => success_count += 1,
@@ -175,9 +179,9 @@ impl BehaviorTreeRunner {
                         BtStatus::Running => running_count += 1,
                     }
                 }
-                
+
                 let total = children.len();
-                
+
                 // Check success policy
                 match success_policy {
                     ParallelPolicy::RequireAll if success_count == total => BtStatus::Success,
@@ -185,7 +189,9 @@ impl BehaviorTreeRunner {
                     _ => {
                         // Check failure policy
                         match failure_policy {
-                            ParallelPolicy::RequireAll if failure_count == total => BtStatus::Failure,
+                            ParallelPolicy::RequireAll if failure_count == total => {
+                                BtStatus::Failure
+                            }
                             ParallelPolicy::RequireOne if failure_count >= 1 => BtStatus::Failure,
                             _ => {
                                 if running_count > 0 {
@@ -198,23 +204,22 @@ impl BehaviorTreeRunner {
                     }
                 }
             }
-            RuntimeNode::Inverter { child, .. } => {
-                match self.execute_node(child, entity, world) {
-                    BtStatus::Success => BtStatus::Failure,
-                    BtStatus::Failure => BtStatus::Success,
-                    BtStatus::Running => BtStatus::Running,
-                }
-            }
+            RuntimeNode::Inverter { child, .. } => match self.execute_node(child, entity, world) {
+                BtStatus::Success => BtStatus::Failure,
+                BtStatus::Failure => BtStatus::Success,
+                BtStatus::Running => BtStatus::Running,
+            },
             RuntimeNode::Repeater { child, count, .. } => {
-                let current_count = self.blackboard.get::<i32>("repeater_count").unwrap_or(0) as u32;
-                
+                let current_count =
+                    self.blackboard.get::<i32>("repeater_count").unwrap_or(0) as u32;
+
                 if let Some(max) = count {
                     if current_count >= *max {
                         self.blackboard.set("repeater_count", 0u32);
                         return BtStatus::Success;
                     }
                 }
-                
+
                 match self.execute_node(child, entity, world) {
                     BtStatus::Success | BtStatus::Failure => {
                         self.blackboard.set("repeater_count", current_count + 1);
@@ -223,25 +228,26 @@ impl BehaviorTreeRunner {
                     BtStatus::Running => BtStatus::Running,
                 }
             }
-            RuntimeNode::UntilSuccess { child, .. } => {
-                loop {
-                    match self.execute_node(child, entity, world) {
-                        BtStatus::Success => return BtStatus::Success,
-                        BtStatus::Running => return BtStatus::Running,
-                        BtStatus::Failure => continue,
-                    }
+            RuntimeNode::UntilSuccess { child, .. } => loop {
+                match self.execute_node(child, entity, world) {
+                    BtStatus::Success => return BtStatus::Success,
+                    BtStatus::Running => return BtStatus::Running,
+                    BtStatus::Failure => continue,
                 }
-            }
-            RuntimeNode::UntilFailure { child, .. } => {
-                loop {
-                    match self.execute_node(child, entity, world) {
-                        BtStatus::Success => continue,
-                        BtStatus::Running => return BtStatus::Running,
-                        BtStatus::Failure => return BtStatus::Failure,
-                    }
+            },
+            RuntimeNode::UntilFailure { child, .. } => loop {
+                match self.execute_node(child, entity, world) {
+                    BtStatus::Success => continue,
+                    BtStatus::Running => return BtStatus::Running,
+                    BtStatus::Failure => return BtStatus::Failure,
                 }
-            }
-            RuntimeNode::Cooldown { child, seconds, last_execution, .. } => {
+            },
+            RuntimeNode::Cooldown {
+                child,
+                seconds,
+                last_execution,
+                ..
+            } => {
                 let now = std::time::Instant::now();
                 if let Some(last) = last_execution {
                     if now.duration_since(*last).as_secs_f32() < *seconds {
@@ -257,7 +263,7 @@ impl BehaviorTreeRunner {
                 action.execute(entity, world, &mut self.blackboard)
             }
         };
-        
+
         self.current_path.pop();
         result
     }
@@ -327,10 +333,7 @@ pub enum RuntimeNode {
         failure_policy: ParallelPolicy,
     },
     /// Inverter - inverts child result
-    Inverter {
-        id: NodeId,
-        child: Box<RuntimeNode>,
-    },
+    Inverter { id: NodeId, child: Box<RuntimeNode> },
     /// Repeater - repeats child N times or forever
     Repeater {
         id: NodeId,
@@ -339,15 +342,9 @@ pub enum RuntimeNode {
         current: u32,
     },
     /// UntilSuccess - repeats until child succeeds
-    UntilSuccess {
-        id: NodeId,
-        child: Box<RuntimeNode>,
-    },
+    UntilSuccess { id: NodeId, child: Box<RuntimeNode> },
     /// UntilFailure - repeats until child fails
-    UntilFailure {
-        id: NodeId,
-        child: Box<RuntimeNode>,
-    },
+    UntilFailure { id: NodeId, child: Box<RuntimeNode> },
     /// Cooldown - prevents execution for N seconds
     Cooldown {
         id: NodeId,
@@ -361,10 +358,7 @@ pub enum RuntimeNode {
         condition: Box<dyn Condition>,
     },
     /// Action - performs an action
-    Action {
-        id: NodeId,
-        action: Box<dyn Action>,
-    },
+    Action { id: NodeId, action: Box<dyn Action> },
 }
 
 impl RuntimeNode {
@@ -389,7 +383,7 @@ impl RuntimeNode {
 pub trait Condition: std::fmt::Debug + Send + Sync {
     /// Evaluate the condition
     fn evaluate(&self, entity: Entity, world: &World, blackboard: &Blackboard) -> BtStatus;
-    
+
     /// Clone into a boxed trait object
     fn box_clone(&self) -> Box<dyn Condition>;
 }
@@ -404,7 +398,7 @@ impl Clone for Box<dyn Condition> {
 pub trait Action: std::fmt::Debug + Send + Sync {
     /// Execute the action
     fn execute(&self, entity: Entity, world: &mut World, blackboard: &mut Blackboard) -> BtStatus;
-    
+
     /// Clone into a boxed trait object
     fn box_clone(&self) -> Box<dyn Action>;
 }
@@ -439,7 +433,10 @@ impl Blackboard {
     where
         T: TryFrom<BlackboardValue>,
     {
-        self.values.get(key).cloned().and_then(|v| T::try_from(v).ok())
+        self.values
+            .get(key)
+            .cloned()
+            .and_then(|v| T::try_from(v).ok())
     }
 
     /// Check if a key exists
@@ -696,11 +693,11 @@ mod tests {
     #[test]
     fn test_blackboard_operations() {
         let mut bb = Blackboard::new();
-        
+
         bb.set("health", 100i32);
         bb.set("position", Vec3::new(1.0, 2.0, 3.0));
         bb.set("alive", true);
-        
+
         assert_eq!(bb.get::<i32>("health"), Some(100));
         assert_eq!(bb.get::<Vec3>("position"), Some(Vec3::new(1.0, 2.0, 3.0)));
         assert_eq!(bb.get::<bool>("alive"), Some(true));

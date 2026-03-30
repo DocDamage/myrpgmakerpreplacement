@@ -162,7 +162,8 @@ mod tests {
     #[test]
     fn test_template_engine_render_simple() {
         let template = "Hello, {name}! Welcome to {place}.";
-        let result = TemplateEngine::render_simple(template, &[("name", "Alice"), ("place", "Wonderland")]);
+        let result =
+            TemplateEngine::render_simple(template, &[("name", "Alice"), ("place", "Wonderland")]);
 
         assert_eq!(result, "Hello, Alice! Welcome to Wonderland.");
     }

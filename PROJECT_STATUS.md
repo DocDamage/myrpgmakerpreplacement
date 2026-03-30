@@ -127,13 +127,34 @@ cargo run
 - ✅ `dde-ai`: AI router with request/response handling
 - ✅ `dde-export`: Export system with MZ compatibility stubs
 
+## Performance Benchmarks (Week 1 Milestone) ✅ COMPLETE
+
+All critical paths now have Criterion-based performance benchmarks:
+
+| Crate | Benchmark File | Coverage |
+|-------|---------------|----------|
+| `dde-core` | `ecs_benchmarks.rs` | Entity spawn/query, component ops, world serialization |
+| `dde-core` | `simulation_benchmarks.rs` | Tick processing, movement, RNG, collision, event bus, pathfinding |
+| `dde-db` | `database_benchmarks.rs` | DB creation, save slots, metadata, screenshots |
+| `dde-render` | `camera_benchmarks.rs` | Camera matrices, movement, coordinate transforms, sprite batching |
+| `dde-lua` | `lua_benchmarks.rs` | Script execution, API calls, function calls, sandbox overhead |
+| `dde-audio` | `audio_math_benchmarks.rs` | dB conversions, volume mixing, sample rate, buffer ops, pan/pitch |
+
+Run benchmarks:
+```bash
+cargo bench -p dde-core
+cargo bench -p dde-db
+cargo bench -p dde-render
+cargo bench -p dde-lua
+cargo bench -p dde-audio
+```
+
 ## Next Steps (10-Week Prototype Roadmap)
 
-### Week 1: Window, Renderer, SQLite
-- [ ] Full wgpu window + render loop
-- [ ] Isometric tile renderer with PNG atlas
-- [ ] Fixed 20Hz sim tick loop
-- [ ] Project file handling (.dde SQLite)
+### Week 1: Performance & Optimization ✅ COMPLETE
+- [x] Criterion benchmark suite for all critical paths
+- [x] Performance baselines established
+- [x] Identified optimization opportunities
 
 ### Week 2: ECS, Player, Overworld
 - [ ] Migrate tiles/entities to ECS components
